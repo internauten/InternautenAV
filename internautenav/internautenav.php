@@ -69,7 +69,7 @@ class Internautenav extends Module
 
             $selectedRefs = array_values(array_unique(array_map('intval', $selectedRefs)));
             Configuration::updateValue(self::CONF_REQUIRED_CARRIER_REFS, json_encode($selectedRefs));
-            $output .= $this->displayConfirmation($this->l('Einstellungen gespeichert.'));
+            $output .= $this->displayConfirmation($this->l('backoffice_settings_saved'));
         }
 
         $current = $this->getRequiredCarrierReferences();
@@ -94,12 +94,12 @@ class Internautenav extends Module
         );
 
         $output .= '<div class="panel">';
-        $output .= '<h3>' . $this->l('MRZ-Verifikation nach Versandart') . '</h3>';
-        $output .= '<p>' . $this->l('Waehlen Sie die Versandarten aus, fuer die die MRZ-Pruefung im Checkout erzwungen werden soll.') . '</p>';
+        $output .= '<h3>' . $this->l('backoffice_title') . '</h3>';
+        $output .= '<p>' . $this->l('backoffice_description') . '</p>';
         $output .= '<form method="post" action="' . $action . '">';
         $output .= '<input type="hidden" name="token" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">';
         $output .= '<div class="form-group">';
-        $output .= '<label>' . $this->l('Versandarten mit MRZ-Pflicht') . '</label>';
+        $output .= '<label>' . $this->l('backoffice_label') . '</label>';
         $output .= '<select name="INTERNAUTENAV_REQUIRED_CARRIER_REFS[]" class="form-control" multiple size="10">';
 
         foreach ($carriers as $carrierRow) {
@@ -111,9 +111,9 @@ class Internautenav extends Module
         }
 
         $output .= '</select>';
-        $output .= '<p class="help-block">' . $this->l('Es wird mit id_reference gespeichert, damit die Auswahl bei Carrier-Neuanlage stabil bleibt.') . '</p>';
+        $output .= '<p class="help-block">' . $this->l('backoffice_help') . '</p>';
         $output .= '</div>';
-        $output .= '<button type="submit" name="submitInternautenavConfig" class="btn btn-primary">' . $this->l('Speichern') . '</button>';
+        $output .= '<button type="submit" name="submitInternautenavConfig" class="btn btn-primary">' . $this->l('backoffice_save_button') . '</button>';
         $output .= '</form>';
         $output .= '</div>';
 
@@ -149,19 +149,26 @@ class Internautenav extends Module
 
         // --- Attempt log ---
         $output .= '<div class="panel">';
-        $output .= '<h3>' . $this->l('Debug: Verifikations-Log (letzte 200 Eintraege)') . '</h3>';
+        $output .= '<h3>' . $this->l('debug_log_title') . '</h3>';
         $output .= '<div style="overflow-x:auto">';
         $output .= '<table class="table table-bordered table-striped" style="font-size:12px">';
         $output .= '<thead><tr>';
         foreach ([
-            'ID', 'Zeitpunkt', 'Referenz', 'Kunde', 'id_cart', 'Dokument', 'Ergebnis', 'Meldung',
+            $this->l('debug_log_col_id'),
+            $this->l('debug_log_col_timestamp'),
+            $this->l('debug_log_col_reference'),
+            $this->l('debug_log_col_customer'),
+            $this->l('debug_log_col_cart'),
+            $this->l('debug_log_col_doc'),
+            $this->l('debug_log_col_result'),
+            $this->l('debug_log_col_message'),
         ] as $th) {
             $output .= '<th>' . htmlspecialchars($th, ENT_QUOTES, 'UTF-8') . '</th>';
         }
         $output .= '</tr></thead><tbody>';
 
         if (empty($logRows)) {
-            $output .= '<tr><td colspan="8" class="text-center text-muted">' . $this->l('Keine Eintraege.') . '</td></tr>';
+            $output .= '<tr><td colspan="8" class="text-center text-muted">' . $this->l('debug_log_empty') . '</td></tr>';
         }
 
         foreach ($logRows as $row) {
@@ -181,7 +188,7 @@ class Internautenav extends Module
             $output .= '<td>' . htmlspecialchars($customerDisplay, ENT_QUOTES, 'UTF-8') . '</td>';
             $output .= $td($row['id_cart'] ?? '');
             $output .= $td($row['doc_type']);
-            $output .= '<td style="font-weight:bold">' . ($isOk ? '&#10003; OK' : '&#10007; Fehler') . '</td>';
+            $output .= '<td style="font-weight:bold">' . ($isOk ? '&#10003; ' . $this->l('debug_log_result_ok') : '&#10007; ' . $this->l('debug_log_result_fail')) . '</td>';
             $output .= $td($row['result_message'] ?? '');
             $output .= '</tr>';
         }
@@ -192,19 +199,25 @@ class Internautenav extends Module
 
         // --- Persistent verifications ---
         $output .= '<div class="panel">';
-        $output .= '<h3>' . $this->l('Debug: Gespeicherte Verifikationen (eingeloggte Kunden)') . '</h3>';
+        $output .= '<h3>' . $this->l('debug_persistent_title') . '</h3>';
         $output .= '<div style="overflow-x:auto">';
         $output .= '<table class="table table-bordered table-striped" style="font-size:12px">';
         $output .= '<thead><tr>';
         foreach ([
-              'ID', 'id_customer', 'Kunde', 'E-Mail', 'Dokument', 'Geburtsdatum', 'verified_at',
+              $this->l('debug_persistent_col_id'),
+              $this->l('debug_persistent_col_customer_id'),
+              $this->l('debug_persistent_col_name'),
+              $this->l('debug_persistent_col_email'),
+              $this->l('debug_persistent_col_doc'),
+              $this->l('debug_persistent_col_birth'),
+              $this->l('debug_persistent_col_verified'),
         ] as $th) {
             $output .= '<th>' . htmlspecialchars($th, ENT_QUOTES, 'UTF-8') . '</th>';
         }
         $output .= '</tr></thead><tbody>';
 
         if (empty($persistRows)) {
-            $output .= '<tr><td colspan="6" class="text-center text-muted">' . $this->l('Keine Eintraege.') . '</td></tr>';
+            $output .= '<tr><td colspan="7" class="text-center text-muted">' . $this->l('debug_log_empty') . '</td></tr>';
         }
 
         foreach ($persistRows as $row) {
@@ -288,22 +301,22 @@ class Internautenav extends Module
             'internautenav_carrier_id' => $carrier['id'],
             'internautenav_carrier_name' => $carrier['name'],
             'internautenav_is_verified' => $isVerified,
-            'internautenav_payment_title' => $this->l('Alterspruefung fuer diese Versandart'),
-            'internautenav_payment_intro' => $this->l('Fuer die gewaehlte Versandart ist vor der Zahlung eine Alters- und Identitaetspruefung erforderlich.'),
-            'internautenav_payment_link' => $this->l('MRZ-Pruefung jetzt starten'),
-            'internautenav_payment_success' => $this->l('MRZ-Pruefung erfolgreich abgeschlossen. Die Zahlung ist freigeschaltet.'),
-            'internautenav_payment_locked' => $this->l('Solange die erfolgreiche Pruefung nicht serverseitig vorliegt, bleiben die Zahlungsfelder gesperrt.'),
-            'internautenav_modal_title' => $this->l('MRZ-Daten eingeben'),
-            'internautenav_modal_close' => $this->l('Schliessen'),
-            'internautenav_modal_submit' => $this->l('Jetzt pruefen'),
-            'internautenav_doc_label' => $this->l('Dokumenttyp'),
-            'internautenav_doc_ch_id' => $this->l('Schweizer ID (3 Zeilen)'),
-            'internautenav_doc_ch_pass' => $this->l('Schweizer Pass (2 Zeilen)'),
-            'internautenav_doc_eu_pass' => $this->l('EU Pass (2 Zeilen)'),
-            'internautenav_line1_label' => $this->l('MRZ Zeile 1'),
-            'internautenav_line2_label' => $this->l('MRZ Zeile 2'),
-            'internautenav_line3_label' => $this->l('MRZ Zeile 3 (nur CH ID)'),
-            'internautenav_hint' => $this->l('Bitte Zeilen exakt wie im Dokument inklusive < eingeben.'),
+            'internautenav_payment_title' => $this->l('payment_title'),
+            'internautenav_payment_intro' => $this->l('payment_intro'),
+            'internautenav_payment_link' => $this->l('payment_link'),
+            'internautenav_payment_success' => $this->l('payment_success'),
+            'internautenav_payment_locked' => $this->l('payment_locked'),
+            'internautenav_modal_title' => $this->l('modal_title'),
+            'internautenav_modal_close' => $this->l('modal_close'),
+            'internautenav_modal_submit' => $this->l('modal_submit'),
+            'internautenav_doc_label' => $this->l('form_doc_label'),
+            'internautenav_doc_ch_id' => $this->l('form_doc_ch_id'),
+            'internautenav_doc_ch_pass' => $this->l('form_doc_ch_pass'),
+            'internautenav_doc_eu_pass' => $this->l('form_doc_eu_pass'),
+            'internautenav_line1_label' => $this->l('form_line1_label'),
+            'internautenav_line2_label' => $this->l('form_line2_label'),
+            'internautenav_line3_label' => $this->l('form_line3_label'),
+            'internautenav_hint' => $this->l('modal_hint'),
         ]);
 
         return $this->display(__FILE__, 'views/templates/hook/payment_gate.tpl');
@@ -328,15 +341,15 @@ class Internautenav extends Module
 
         $this->context->smarty->assign([
             'internautenav_carrier_id' => $carrierId,
-            'internautenav_intro' => $this->l('Fuer diese Versandart ist eine Alters- und Identitaetspruefung ueber MRZ erforderlich.'),
-            'internautenav_doc_label' => $this->l('Dokumenttyp'),
-            'internautenav_doc_ch_id' => $this->l('Schweizer ID (3 Zeilen)'),
-            'internautenav_doc_ch_pass' => $this->l('Schweizer Pass (2 Zeilen)'),
-            'internautenav_doc_eu_pass' => $this->l('EU Pass (2 Zeilen)'),
-            'internautenav_line1_label' => $this->l('MRZ Zeile 1'),
-            'internautenav_line2_label' => $this->l('MRZ Zeile 2'),
-            'internautenav_line3_label' => $this->l('MRZ Zeile 3 (nur CH ID)'),
-            'internautenav_hint' => $this->l('Bitte Zeilen exakt wie im Dokument inkl. < eingeben.'),
+            'internautenav_intro' => $this->l('payment_intro'),
+            'internautenav_doc_label' => $this->l('form_doc_label'),
+            'internautenav_doc_ch_id' => $this->l('form_doc_ch_id'),
+            'internautenav_doc_ch_pass' => $this->l('form_doc_ch_pass'),
+            'internautenav_doc_eu_pass' => $this->l('form_doc_eu_pass'),
+            'internautenav_line1_label' => $this->l('form_line1_label'),
+            'internautenav_line2_label' => $this->l('form_line2_label'),
+            'internautenav_line3_label' => $this->l('form_line3_label'),
+            'internautenav_hint' => $this->l('modal_hint'),
         ]);
 
         $output = $this->display(__FILE__, 'views/templates/hook/carrier_extra_form.tpl');
@@ -374,12 +387,12 @@ class Internautenav extends Module
         $docType = (string) ($payload['doc_type'] ?? '');
         $carrierId = (int) $carrierId;
         if ($carrierId <= 0) {
-            return $this->finalizeMrzValidationResult($docType, false, $this->l('Ungueltiger Carrier.'));
+            return $this->finalizeMrzValidationResult($docType, false, $this->l('error_invalid_carrier'));
         }
 
         $carrier = new Carrier($carrierId);
         if (!Validate::isLoadedObject($carrier)) {
-            return $this->finalizeMrzValidationResult($docType, false, $this->l('Carrier nicht gefunden.'));
+            return $this->finalizeMrzValidationResult($docType, false, $this->l('error_carrier_not_found'));
         }
 
         $carrierReference = (int) $carrier->id_reference;
@@ -398,24 +411,24 @@ class Internautenav extends Module
             return $this->finalizeMrzValidationResult(
                 $docType,
                 false,
-                isset($validation['message']) ? (string) $validation['message'] : $this->l('MRZ ungueltig.')
+                isset($validation['message']) ? (string) $validation['message'] : $this->l('error_mrz_invalid')
             );
         }
 
         $idAddressDelivery = (int) $this->context->cart->id_address_delivery;
         $address = new Address($idAddressDelivery);
         if (!Validate::isLoadedObject($address)) {
-            return $this->finalizeMrzValidationResult($docType, false, $this->l('Lieferadresse konnte nicht geladen werden.'));
+            return $this->finalizeMrzValidationResult($docType, false, $this->l('error_address_not_found'));
         }
 
         $nameCheck = MrzValidator::matchNames($address->firstname, $address->lastname, $validation['data']);
         if (empty($nameCheck['valid'])) {
-            return $this->finalizeMrzValidationResult($docType, false, $this->l('Name und Vorname der Lieferadresse stimmen nicht mit der MRZ ueberein.'));
+            return $this->finalizeMrzValidationResult($docType, false, $this->l('error_name_mismatch'));
         }
 
         $adultCheck = MrzValidator::isAdult($validation['data']['birth_date'], 18);
         if (empty($adultCheck['valid'])) {
-            return $this->finalizeMrzValidationResult($docType, false, $this->l('Bestellung nur fuer volljaehrige Personen (18+).'));
+            return $this->finalizeMrzValidationResult($docType, false, $this->l('error_age_check'));
         }
 
         if ($persistOnSuccess) {

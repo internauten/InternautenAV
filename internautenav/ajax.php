@@ -103,15 +103,15 @@ if ($action === 'get_mrz_form') {
     // Lade TPL
     $context->smarty->assign([
         'internautenav_carrier_id' => $carrierId,
-        'internautenav_intro' => $module->l('Fuer diese Versandart ist eine Alters- und Identitaetspruefung ueber MRZ erforderlich.'),
-        'internautenav_doc_label' => $module->l('Dokumenttyp'),
-        'internautenav_doc_ch_id' => $module->l('Schweizer ID (3 Zeilen)'),
-        'internautenav_doc_ch_pass' => $module->l('Schweizer Pass (2 Zeilen)'),
-        'internautenav_doc_eu_pass' => $module->l('EU Pass (2 Zeilen)'),
-        'internautenav_line1_label' => $module->l('MRZ Zeile 1'),
-        'internautenav_line2_label' => $module->l('MRZ Zeile 2'),
-        'internautenav_line3_label' => $module->l('MRZ Zeile 3 (nur CH ID)'),
-        'internautenav_hint' => $module->l('Bitte Zeilen exakt wie im Dokument inkl. < eingeben.'),
+        'internautenav_intro' => $module->l('payment_intro'),
+        'internautenav_doc_label' => $module->l('form_doc_label'),
+        'internautenav_doc_ch_id' => $module->l('form_doc_ch_id'),
+        'internautenav_doc_ch_pass' => $module->l('form_doc_ch_pass'),
+        'internautenav_doc_eu_pass' => $module->l('form_doc_eu_pass'),
+        'internautenav_line1_label' => $module->l('form_line1_label'),
+        'internautenav_line2_label' => $module->l('form_line2_label'),
+        'internautenav_line3_label' => $module->l('form_line3_label'),
+        'internautenav_hint' => $module->l('modal_hint'),
     ]);
 
     header('Content-Type: text/html; charset=utf-8');
