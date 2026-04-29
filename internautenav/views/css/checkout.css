@@ -1,22 +1,133 @@
-.internautenav-mrz-box {
-  margin-top: 10px;
-  padding: 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  background: #fafafa;
+.internautenav-payment-gate {
+  margin: 0 0 18px;
 }
 
-.internautenav-intro {
-  margin-bottom: 10px;
+.internautenav-payment-card {
+  padding: 16px 18px;
+  border: 1px solid #d8d2c7;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fffdf8 0%, #f7f1e4 100%);
+  box-shadow: 0 10px 24px rgba(60, 43, 14, 0.08);
+}
+
+.internautenav-payment-eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a5c1f;
+}
+
+.internautenav-payment-intro {
+  margin: 0 0 10px;
+  color: #2c2417;
+}
+
+.internautenav-payment-lock-note,
+.internautenav-payment-success {
+  margin: 0 0 12px;
   font-weight: 600;
 }
 
+.internautenav-payment-lock-note {
+  color: #8a5a00;
+}
+
+.internautenav-payment-success {
+  color: #1f6b36;
+}
+
+.internautenav-payment-link {
+  min-width: 220px;
+}
+
+.internautenav-payment-step-locked .payment-options,
+.internautenav-payment-step-locked .js-payment-options {
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+}
+
+.internautenav-modal[hidden] {
+  display: none !important;
+}
+
+.internautenav-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+.internautenav-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(18, 16, 12, 0.58);
+}
+
+.internautenav-modal-dialog {
+  position: relative;
+  width: min(92vw, 580px);
+  margin: 5vh auto 0;
+  padding: 24px;
+  border-radius: 14px;
+  background: #fffdf9;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28);
+}
+
+.internautenav-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: 0;
+  background: transparent;
+  font-size: 28px;
+  line-height: 1;
+  color: #5a5147;
+}
+
+.internautenav-modal-title {
+  margin: 0 0 18px;
+  padding-right: 28px;
+}
+
 .internautenav-group {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .internautenav-hint {
   margin: 8px 0 0;
   font-size: 12px;
-  color: #666;
+  color: #6b6257;
+}
+
+.internautenav-modal-error {
+  margin: 12px 0 0;
+  color: #b42318;
+  font-weight: 600;
+}
+
+.internautenav-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+body.internautenav-modal-open {
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .internautenav-modal-dialog {
+    margin-top: 2vh;
+    padding: 18px;
+  }
+
+  .internautenav-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .internautenav-modal-actions .btn {
+    width: 100%;
+  }
 }

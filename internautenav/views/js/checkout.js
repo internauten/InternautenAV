@@ -1,177 +1,317 @@
 document.addEventListener('DOMContentLoaded', function () {
-    function getSelectedCarrierInput() {
-        return document.querySelector('input[name^="delivery_option"]:checked');
+    var GATE_SELECTOR = '.js-internautenav-payment-gate';
+
+    function getAllGates() {
+        return document.querySelectorAll(GATE_SELECTOR);
     }
 
-    function getSelectedCarrierId() {
-        var input = getSelectedCarrierInput();
-        if (!input || !input.value) {
-            return null;
-        }
-
-        var match = input.value.match(/^(\d+),/);
-        return match ? match[1] : null;
+    function getPaymentStep(gate) {
+        return gate.closest('#checkout-payment-step') || gate.closest('.checkout-step') || gate.parentElement;
     }
 
-    function setLineRules(box, docType) {
-        var line3Group = box.querySelector('.js-internautenav-line3-group');
-        var line1 = box.querySelector('input[name^="internautenav_mrz_line1"]');
-        var line2 = box.querySelector('input[name^="internautenav_mrz_line2"]');
-        var line3 = box.querySelector('input[name^="internautenav_mrz_line3"]');
+    function getModal(gate) {
+        return gate.querySelector('.js-internautenav-modal');
+    }
 
-        if (!line1 || !line2 || !line3 || !line3Group) {
+    function getModalForm(gate) {
+        return gate.querySelector('.js-internautenav-modal-form');
+    }
+
+    function getDocTypeSelect(gate) {
+        return gate.querySelector('.js-internautenav-doc-type');
+    }
+
+    function getLineFields(gate) {
+        return {
+            line1: gate.querySelector('input[name="internautenav_modal_line1"]'),
+            line2: gate.querySelector('input[name="internautenav_modal_line2"]'),
+            line3: gate.querySelector('input[name="internautenav_modal_line3"]'),
+            line3Group: gate.querySelector('.js-internautenav-line3-group')
+        };
+    }
+
+    function getErrorNode(gate) {
+        return gate.querySelector('.js-internautenav-error');
+    }
+
+    function setLineRules(gate) {
+        var select = getDocTypeSelect(gate);
+        var fields = getLineFields(gate);
+        if (!select || !fields.line1 || !fields.line2 || !fields.line3 || !fields.line3Group) {
             return;
         }
 
-        if (docType === 'ch_id') {
-            line1.maxLength = 30;
-            line2.maxLength = 30;
-            line3.maxLength = 30;
-            line3Group.style.display = '';
+        if (select.value === 'ch_id') {
+            fields.line1.maxLength = 30;
+            fields.line2.maxLength = 30;
+            fields.line3.maxLength = 30;
+            fields.line3.required = true;
+            fields.line3Group.style.display = '';
             return;
         }
 
-        line1.maxLength = 44;
-        line2.maxLength = 44;
-        line3Group.style.display = 'none';
-        line3.value = '';
+        fields.line1.maxLength = 44;
+        fields.line2.maxLength = 44;
+        fields.line3.required = false;
+        fields.line3.value = '';
+        fields.line3Group.style.display = 'none';
     }
 
-    function toggleExistingHookBoxes() {
-        var selectedCarrierId = getSelectedCarrierId();
-        var boxes = document.querySelectorAll('.internautenav-mrz-box');
+    function openModal(gate) {
+        var modal = getModal(gate);
+        if (!modal) {
+            return;
+        }
 
-        boxes.forEach(function (box) {
-            var carrierId = box.getAttribute('data-carrier-id');
-            var isActive = selectedCarrierId !== null && carrierId === selectedCarrierId;
+        modal.hidden = false;
+        document.body.classList.add('internautenav-modal-open');
 
-            box.style.display = isActive ? '' : 'none';
-            if (isActive) {
-                var select = box.querySelector('.js-internautenav-doc-type');
-                setLineRules(box, select ? select.value : '');
-            }
+        var select = getDocTypeSelect(gate);
+        if (select) {
+            select.focus();
+        }
+    }
+
+    function closeModal(gate) {
+        var modal = getModal(gate);
+        if (!modal) {
+            return;
+        }
+
+        modal.hidden = true;
+        document.body.classList.remove('internautenav-modal-open');
+    }
+
+    function showError(gate, message) {
+        var errorNode = getErrorNode(gate);
+        if (!errorNode) {
+            return;
+        }
+
+        errorNode.hidden = false;
+        errorNode.textContent = message || 'Pruefung fehlgeschlagen.';
+    }
+
+    function clearError(gate) {
+        var errorNode = getErrorNode(gate);
+        if (!errorNode) {
+            return;
+        }
+
+        errorNode.hidden = true;
+        errorNode.textContent = '';
+    }
+
+    function setBusy(gate, isBusy) {
+        var form = getModalForm(gate);
+        if (!form) {
+            return;
+        }
+
+        var controls = form.querySelectorAll('button, input, select');
+        controls.forEach(function (control) {
+            control.disabled = !!isBusy;
         });
     }
 
-    function findCarrierTargetNode() {
-        var input = getSelectedCarrierInput();
-        if (!input) {
-            return null;
-        }
+    function collectPayload(gate) {
+        var select = getDocTypeSelect(gate);
+        var fields = getLineFields(gate);
 
-        return (
-            input.closest('.delivery-option') ||
-            input.closest('.carrier-item') ||
-            input.closest('li') ||
-            input.parentElement
-        );
+        return {
+            carrierId: gate.getAttribute('data-carrier-id') || '',
+            docType: select ? select.value : '',
+            line1: fields.line1 ? fields.line1.value : '',
+            line2: fields.line2 ? fields.line2.value : '',
+            line3: fields.line3 ? fields.line3.value : ''
+        };
     }
 
-    function ensureAjaxContainer(carrierId) {
-        var id = 'internautenav-ajax-container-' + carrierId;
-        var existing = document.getElementById(id);
-        if (existing) {
-            return existing;
+    function getPaymentControls(gate) {
+        var step = getPaymentStep(gate);
+        if (!step) {
+            return [];
         }
 
-        var target = findCarrierTargetNode();
-        if (!target) {
-            return null;
-        }
-
-        var container = document.createElement('div');
-        container.id = id;
-        container.className = 'internautenav-ajax-container';
-        target.appendChild(container);
-
-        return container;
-    }
-
-    function hideInactiveAjaxContainers(activeCarrierId) {
-        var containers = document.querySelectorAll('.internautenav-ajax-container');
-        containers.forEach(function (container) {
-            if (!activeCarrierId || container.id !== 'internautenav-ajax-container-' + activeCarrierId) {
-                container.style.display = 'none';
-            }
+        return Array.prototype.slice.call(
+            step.querySelectorAll('button, input:not([type="hidden"]), select, textarea')
+        ).filter(function (control) {
+            return !gate.contains(control);
         });
     }
 
-    function loadAjaxFormIfNeeded() {
-        var selectedCarrierId = getSelectedCarrierId();
-        if (!selectedCarrierId) {
-            hideInactiveAjaxContainers(null);
+    function setPaymentLocked(gate, isLocked) {
+        var step = getPaymentStep(gate);
+        var openButton = gate.querySelector('.js-internautenav-open');
+        var lockNote = gate.querySelector('.js-internautenav-lock-note');
+        var successNote = gate.querySelector('.js-internautenav-success-note');
+
+        gate.setAttribute('data-verified', isLocked ? '0' : '1');
+
+        if (step) {
+            step.classList.toggle('internautenav-payment-step-locked', isLocked);
+        }
+
+        getPaymentControls(gate).forEach(function (control) {
+            if (isLocked) {
+                control.disabled = true;
+                control.setAttribute('data-internautenav-locked', '1');
+                return;
+            }
+
+            if (control.getAttribute('data-internautenav-locked') === '1') {
+                control.disabled = false;
+                control.removeAttribute('data-internautenav-locked');
+            }
+        });
+
+        if (openButton) {
+            openButton.style.display = isLocked ? '' : 'none';
+        }
+        if (lockNote) {
+            lockNote.style.display = isLocked ? '' : 'none';
+        }
+        if (successNote) {
+            successNote.style.display = isLocked ? 'none' : '';
+        }
+    }
+
+    function handleModalSubmit(gate, event) {
+        event.preventDefault();
+
+        var form = getModalForm(gate);
+        if (!form) {
             return;
         }
 
-        var hasHookBox = document.querySelector('.internautenav-mrz-box[data-carrier-id="' + selectedCarrierId + '"]');
-        if (hasHookBox) {
-            hideInactiveAjaxContainers(selectedCarrierId);
+        setLineRules(gate);
+        clearError(gate);
 
-            var activeContainer = document.getElementById('internautenav-ajax-container-' + selectedCarrierId);
-            if (activeContainer) {
-                activeContainer.style.display = '';
+        if (!form.checkValidity()) {
+            if (typeof form.reportValidity === 'function') {
+                form.reportValidity();
             }
             return;
         }
 
-        var container = ensureAjaxContainer(selectedCarrierId);
-        if (!container) {
-            return;
-        }
-
-        hideInactiveAjaxContainers(selectedCarrierId);
-        container.style.display = '';
-
-        if (container.getAttribute('data-loaded') === '1') {
-            return;
-        }
-
+        var payload = collectPayload(gate);
         var baseUrl = (typeof internautenav_ajax_url !== 'undefined' && internautenav_ajax_url) ? internautenav_ajax_url : '/modules/internautenav/ajax.php';
-        var url = baseUrl + '?action=get_mrz_form&carrier_id=' + encodeURIComponent(selectedCarrierId) + '&_t=' + Date.now();
+        var body = new URLSearchParams();
 
-        fetch(url, { credentials: 'same-origin' })
+        body.set('action', 'validate_mrz');
+        body.set('carrier_id', payload.carrierId);
+        body.set('doc_type', payload.docType);
+        body.set('line1', payload.line1);
+        body.set('line2', payload.line2);
+        body.set('line3', payload.line3);
+
+        setBusy(gate, true);
+
+        fetch(baseUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+            },
+            body: body.toString()
+        })
             .then(function (response) {
-                return response.text();
+                return response.json().catch(function () {
+                    return null;
+                });
             })
-            .then(function (html) {
-                container.innerHTML = html || '';
-                container.setAttribute('data-loaded', '1');
-
-                var box = container.querySelector('.internautenav-mrz-box');
-                if (box) {
-                    box.style.display = '';
-                    var select = box.querySelector('.js-internautenav-doc-type');
-                    setLineRules(box, select ? select.value : '');
+            .then(function (result) {
+                if (!result || result.valid !== true) {
+                    showError(gate, result && result.message ? result.message : 'MRZ-Pruefung fehlgeschlagen.');
+                    return;
                 }
+
+                setPaymentLocked(gate, false);
+                closeModal(gate);
             })
             .catch(function () {
-                container.innerHTML = '';
+                showError(gate, 'Die Pruefung ist momentan nicht verfuegbar. Bitte erneut versuchen.');
+            })
+            .finally(function () {
+                setBusy(gate, false);
             });
     }
 
-    function refresh() {
-        toggleExistingHookBoxes();
-        loadAjaxFormIfNeeded();
-    }
-
-    document.body.addEventListener('change', function (event) {
-        if (event.target.matches('input[name^="delivery_option"]')) {
-            refresh();
+    function bindGate(gate) {
+        if (gate.getAttribute('data-internautenav-bound') === '1') {
+            setPaymentLocked(gate, gate.getAttribute('data-verified') !== '1');
             return;
         }
 
-        if (event.target.matches('.js-internautenav-doc-type')) {
-            var box = event.target.closest('.internautenav-mrz-box');
-            if (box) {
-                setLineRules(box, event.target.value);
+        gate.setAttribute('data-internautenav-bound', '1');
+        setLineRules(gate);
+        setPaymentLocked(gate, gate.getAttribute('data-verified') !== '1');
+
+        gate.addEventListener('click', function (event) {
+            if (event.target.closest('.js-internautenav-open')) {
+                event.preventDefault();
+                openModal(gate);
+                return;
             }
+
+            if (event.target.closest('.js-internautenav-close')) {
+                event.preventDefault();
+                closeModal(gate);
+            }
+        });
+
+        gate.addEventListener('change', function (event) {
+            if (event.target.matches('.js-internautenav-doc-type')) {
+                clearError(gate);
+                setLineRules(gate);
+                return;
+            }
+
+            if (event.target.matches('input[name^="internautenav_modal_line"]')) {
+                clearError(gate);
+            }
+        });
+
+        var form = getModalForm(gate);
+        if (form) {
+            form.addEventListener('submit', function (event) {
+                handleModalSubmit(gate, event);
+            });
         }
+
+        var step = getPaymentStep(gate);
+        if (step && typeof MutationObserver !== 'undefined') {
+            var observer = new MutationObserver(function () {
+                setPaymentLocked(gate, gate.getAttribute('data-verified') !== '1');
+            });
+
+            observer.observe(step, {
+                childList: true,
+                subtree: true
+            });
+        }
+    }
+
+    function refreshGates() {
+        getAllGates().forEach(function (gate) {
+            bindGate(gate);
+        });
+    }
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') {
+            return;
+        }
+
+        getAllGates().forEach(function (gate) {
+            closeModal(gate);
+        });
     });
 
-    document.addEventListener('updatedDeliveryForm', refresh);
-    document.addEventListener('updatedCart', refresh);
+    document.addEventListener('updatedDeliveryForm', refreshGates);
+    document.addEventListener('updatedCart', refreshGates);
 
-    refresh();
+    refreshGates();
 });
 
 

@@ -59,6 +59,16 @@ if (!$module) {
 
 $action = Tools::getValue('action', '');
 
+if (!function_exists('internautenav_json_response')) {
+    function internautenav_json_response(array $payload, $statusCode = 200)
+    {
+        http_response_code((int) $statusCode);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($payload);
+        exit;
+    }
+}
+
 if ($action === 'get_mrz_form') {
     $carrierId = (int)Tools::getValue('carrier_id', 0);
     
@@ -106,5 +116,18 @@ if ($action === 'get_mrz_form') {
 
     header('Content-Type: text/html; charset=utf-8');
     echo $module->fetch('module:internautenav/views/templates/hook/carrier_extra_form.tpl');
+    exit;
+}
+
+if ($action === 'validate_mrz') {
+    $carrierId = (int) Tools::getValue('carrier_id', 0);
+    $result = $module->validateMrzForCarrier($carrierId, [
+        'doc_type' => (string) Tools::getValue('doc_type', ''),
+        'line1' => (string) Tools::getValue('line1', ''),
+        'line2' => (string) Tools::getValue('line2', ''),
+        'line3' => (string) Tools::getValue('line3', ''),
+    ], true);
+
+    internautenav_json_response($result, !empty($result['valid']) ? 200 : 400);
 }
 ?>

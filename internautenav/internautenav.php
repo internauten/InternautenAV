@@ -14,6 +14,8 @@ class Internautenav extends Module
 {
     public const CONF_REQUIRED_CARRIER_REFS = 'INTERNAUTENAV_REQUIRED_CARRIER_REFS';
     public const DB_TABLE = 'internautenav_customer_verification';
+    public const DB_LOG_TABLE = 'internautenav_verification_log';
+    private const SESSION_VERIFICATION_KEY = 'internautenav_checkout_verification';
 
     public function __construct()
     {
@@ -38,6 +40,7 @@ class Internautenav extends Module
     {
         return parent::install()
             && $this->registerHook('actionFrontControllerSetMedia')
+            && $this->registerHook('displayPaymentTop')
             && $this->registerHook('displayCarrierExtraContent')
             && $this->registerHook('displayAfterCarrier')
             && $this->registerHook('displayBeforeCarrier')
@@ -114,6 +117,112 @@ class Internautenav extends Module
         $output .= '</form>';
         $output .= '</div>';
 
+        // --- Verification log panel ---
+        $this->ensureVerificationLogTable();
+
+        $logRows = Db::getInstance()->executeS(
+            'SELECT l.*, c.firstname, c.lastname, c.email
+             FROM `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '` l
+             LEFT JOIN `' . _DB_PREFIX_ . 'customer` c ON c.id_customer = l.id_customer
+             ORDER BY l.checked_at DESC
+             LIMIT 200'
+        );
+        if (!is_array($logRows)) {
+            $logRows = [];
+        }
+
+        $persistRows = Db::getInstance()->executeS(
+            'SELECT v.*, c.firstname, c.lastname, c.email
+             FROM `' . _DB_PREFIX_ . self::DB_TABLE . '` v
+             LEFT JOIN `' . _DB_PREFIX_ . 'customer` c ON c.id_customer = v.id_customer
+             ORDER BY v.verified_at DESC
+             LIMIT 100'
+        );
+        if (!is_array($persistRows)) {
+            $persistRows = [];
+        }
+
+        // Helper to emit a td safely
+        $td = static function ($val, $extra = '') {
+            return '<td' . ($extra ? ' ' . $extra : '') . '>' . htmlspecialchars((string) $val, ENT_QUOTES, 'UTF-8') . '</td>';
+        };
+
+        // --- Attempt log ---
+        $output .= '<div class="panel">';
+        $output .= '<h3>' . $this->l('Debug: Verifikations-Log (letzte 200 Eintraege)') . '</h3>';
+        $output .= '<div style="overflow-x:auto">';
+        $output .= '<table class="table table-bordered table-striped" style="font-size:12px">';
+        $output .= '<thead><tr>';
+        foreach ([
+            'ID', 'Zeitpunkt', 'Referenz', 'Kunde', 'id_cart', 'Dokument', 'Ergebnis', 'Meldung',
+        ] as $th) {
+            $output .= '<th>' . htmlspecialchars($th, ENT_QUOTES, 'UTF-8') . '</th>';
+        }
+        $output .= '</tr></thead><tbody>';
+
+        if (empty($logRows)) {
+            $output .= '<tr><td colspan="8" class="text-center text-muted">' . $this->l('Keine Eintraege.') . '</td></tr>';
+        }
+
+        foreach ($logRows as $row) {
+            $isOk = (int) $row['result'] === 1;
+            $rowStyle = $isOk ? 'background:#dff0d8' : 'background:#f2dede';
+            $customerName = trim(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? ''));
+            if ($customerName === '' && (int) ($row['id_guest'] ?? 0) > 0) {
+                $customerName = 'Guest #' . $row['id_guest'];
+            }
+            $email = $row['email'] ?? '';
+            $customerDisplay = $customerName . ($email ? ' <' . $email . '>' : '');
+
+            $output .= '<tr style="' . $rowStyle . '">';
+            $output .= $td($row['id_internautenav_verification_log']);
+            $output .= $td($row['checked_at']);
+            $output .= $td($row['customer_reference']);
+            $output .= '<td>' . htmlspecialchars($customerDisplay, ENT_QUOTES, 'UTF-8') . '</td>';
+            $output .= $td($row['id_cart'] ?? '');
+            $output .= $td($row['doc_type']);
+            $output .= '<td style="font-weight:bold">' . ($isOk ? '&#10003; OK' : '&#10007; Fehler') . '</td>';
+            $output .= $td($row['result_message'] ?? '');
+            $output .= '</tr>';
+        }
+
+        $output .= '</tbody></table>';
+        $output .= '</div>';
+        $output .= '</div>';
+
+        // --- Persistent verifications ---
+        $output .= '<div class="panel">';
+        $output .= '<h3>' . $this->l('Debug: Gespeicherte Verifikationen (eingeloggte Kunden)') . '</h3>';
+        $output .= '<div style="overflow-x:auto">';
+        $output .= '<table class="table table-bordered table-striped" style="font-size:12px">';
+        $output .= '<thead><tr>';
+        foreach ([
+              'ID', 'id_customer', 'Kunde', 'E-Mail', 'Dokument', 'Geburtsdatum', 'verified_at',
+        ] as $th) {
+            $output .= '<th>' . htmlspecialchars($th, ENT_QUOTES, 'UTF-8') . '</th>';
+        }
+        $output .= '</tr></thead><tbody>';
+
+        if (empty($persistRows)) {
+            $output .= '<tr><td colspan="6" class="text-center text-muted">' . $this->l('Keine Eintraege.') . '</td></tr>';
+        }
+
+        foreach ($persistRows as $row) {
+            $output .= '<tr>';
+            $output .= $td($row['id_internautenav_customer_verification'] ?? $row['id'] ?? '');
+            $output .= $td($row['id_customer']);
+            $output .= $td(trim(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? '')));
+            $output .= $td($row['email'] ?? '');
+                $output .= $td($row['doc_type'] ?? '');
+                $output .= $td($row['birth_date'] ?? '');
+                $output .= $td($row['verified_at'] ?? '');
+            $output .= '</tr>';
+        }
+
+        $output .= '</tbody></table>';
+        $output .= '</div>';
+        $output .= '</div>';
+
         return $output;
     }
 
@@ -121,6 +230,10 @@ class Internautenav extends Module
     {
         if ($this->context->controller->php_self !== 'order') {
             return;
+        }
+
+        if (!$this->isRegisteredInHook('displayPaymentTop')) {
+            $this->registerHook('displayPaymentTop');
         }
 
         Media::addJsDef([
@@ -148,64 +261,52 @@ class Internautenav extends Module
 
     public function hookDisplayCarrierExtraContent($params)
     {
-        // In PS 1.7 ist $params['carrier'] ein Array aus CheckoutDeliveryStep
-        // Zum Debuggen: alle Keys ins Error-Log schreiben
-        if (empty($params['carrier'])) {
-            $this->debugLog('hookDisplayCarrierExtraContent - params[carrier] ist leer. params keys: ' . implode(', ', array_keys($params)));
-            return '';
-        }
-
-        $carrier = $params['carrier'];
-        $this->debugLog('carrier keys: ' . (is_array($carrier) ? implode(', ', array_keys($carrier)) : gettype($carrier)));
-
-        // PS 1.7 liefert je nach Checkout-Flow unterschiedliche Strukturen.
-        // Primär aus Array lesen, dann robust per Carrier-Objekt nachladen.
-        if (is_array($carrier)) {
-            $carrierReference = (int) ($carrier['id_reference'] ?? $carrier['id_reference_carrier'] ?? 0);
-            $carrierId = (int) ($carrier['id_carrier'] ?? $carrier['id'] ?? 0);
-
-            if ($carrierId <= 0 && isset($carrier['instance']) && $carrier['instance'] instanceof Carrier) {
-                $carrierId = (int) $carrier['instance']->id;
-            }
-
-            if ($carrierReference <= 0 && isset($carrier['instance']) && $carrier['instance'] instanceof Carrier) {
-                $carrierReference = (int) $carrier['instance']->id_reference;
-            }
-        } else {
-            $carrierReference = (int) $carrier->id_reference;
-            $carrierId = (int) $carrier->id;
-        }
-
-        if (($carrierId > 0) && ($carrierReference <= 0)) {
-            $carrierObject = new Carrier($carrierId);
-            if (Validate::isLoadedObject($carrierObject)) {
-                $carrierReference = (int) $carrierObject->id_reference;
-            }
-        }
-
-        $this->debugLog('carrierId=' . $carrierId . ' carrierRef=' . $carrierReference . ' required=' . (int) $this->isCarrierReferenceRequired($carrierReference));
-
-        return $this->renderMrzForm($carrierId, $carrierReference);
+        return '';
     }
 
     public function hookDisplayAfterCarrier($params)
     {
-        $carrierId = (int) ($params['id_carrier'] ?? 0);
-        if ($carrierId <= 0) {
-            return '';
-        }
-
-        $carrier = new Carrier($carrierId);
-        if (!Validate::isLoadedObject($carrier)) {
-            return '';
-        }
-
-        return $this->renderMrzForm((int) $carrier->id, (int) $carrier->id_reference);
+        return '';
     }
 
     public function hookDisplayBeforeCarrier($params)
     {
-        return $this->hookDisplayAfterCarrier($params);
+        return '';
+    }
+
+    public function hookDisplayPaymentTop($params)
+    {
+        $carrier = $this->getCurrentCheckoutCarrier();
+        if (!$carrier || !$carrier['required']) {
+            $this->clearCheckoutVerificationState();
+            return '';
+        }
+
+        $isVerified = $this->isAlreadyVerifiedForCheckout();
+
+        $this->context->smarty->assign([
+            'internautenav_carrier_id' => $carrier['id'],
+            'internautenav_carrier_name' => $carrier['name'],
+            'internautenav_is_verified' => $isVerified,
+            'internautenav_payment_title' => $this->l('Alterspruefung fuer diese Versandart'),
+            'internautenav_payment_intro' => $this->l('Fuer die gewaehlte Versandart ist vor der Zahlung eine Alters- und Identitaetspruefung erforderlich.'),
+            'internautenav_payment_link' => $this->l('MRZ-Pruefung jetzt starten'),
+            'internautenav_payment_success' => $this->l('MRZ-Pruefung erfolgreich abgeschlossen. Die Zahlung ist freigeschaltet.'),
+            'internautenav_payment_locked' => $this->l('Solange die erfolgreiche Pruefung nicht serverseitig vorliegt, bleiben die Zahlungsfelder gesperrt.'),
+            'internautenav_modal_title' => $this->l('MRZ-Daten eingeben'),
+            'internautenav_modal_close' => $this->l('Schliessen'),
+            'internautenav_modal_submit' => $this->l('Jetzt pruefen'),
+            'internautenav_doc_label' => $this->l('Dokumenttyp'),
+            'internautenav_doc_ch_id' => $this->l('Schweizer ID (3 Zeilen)'),
+            'internautenav_doc_ch_pass' => $this->l('Schweizer Pass (2 Zeilen)'),
+            'internautenav_doc_eu_pass' => $this->l('EU Pass (2 Zeilen)'),
+            'internautenav_line1_label' => $this->l('MRZ Zeile 1'),
+            'internautenav_line2_label' => $this->l('MRZ Zeile 2'),
+            'internautenav_line3_label' => $this->l('MRZ Zeile 3 (nur CH ID)'),
+            'internautenav_hint' => $this->l('Bitte Zeilen exakt wie im Dokument inklusive < eingeben.'),
+        ]);
+
+        return $this->display(__FILE__, 'views/templates/hook/payment_gate.tpl');
     }
 
     private function renderMrzForm($carrierId, $carrierReference)
@@ -258,26 +359,86 @@ class Internautenav extends Module
 
     public function hookActionCarrierProcess($params)
     {
-        return $this->validateCheckoutMrzIfRequired();
+        return true;
     }
 
     public function hookActionValidateStepComplete($params)
     {
-        $isValid = $this->validateCheckoutMrzIfRequired();
-        if ($isValid) {
-            return true;
+        return true;
+    }
+
+    public function validateMrzForCarrier($carrierId, array $payload, $persistOnSuccess = false)
+    {
+        $this->ensureVerificationLogTable();
+
+        $docType = (string) ($payload['doc_type'] ?? '');
+        $carrierId = (int) $carrierId;
+        if ($carrierId <= 0) {
+            return $this->finalizeMrzValidationResult($docType, false, $this->l('Ungueltiger Carrier.'));
         }
 
-        // In 1.7 kann der Checkout trotz Hook-Fehler fortfahren, wenn completed nicht explizit zurueckgesetzt wird.
-        if (isset($params['completed'])) {
-            $params['completed'] = false;
+        $carrier = new Carrier($carrierId);
+        if (!Validate::isLoadedObject($carrier)) {
+            return $this->finalizeMrzValidationResult($docType, false, $this->l('Carrier nicht gefunden.'));
         }
 
-        if (isset($params['step']) && is_object($params['step']) && method_exists($params['step'], 'setComplete')) {
-            $params['step']->setComplete(false);
+        $carrierReference = (int) $carrier->id_reference;
+        if (!$this->isCarrierReferenceRequired($carrierReference)) {
+            return $this->finalizeMrzValidationResult($docType, true, '');
         }
 
-        return false;
+        $validation = MrzValidator::validate(
+            $docType,
+            (string) ($payload['line1'] ?? ''),
+            (string) ($payload['line2'] ?? ''),
+            (string) ($payload['line3'] ?? '')
+        );
+
+        if (empty($validation['valid'])) {
+            return $this->finalizeMrzValidationResult(
+                $docType,
+                false,
+                isset($validation['message']) ? (string) $validation['message'] : $this->l('MRZ ungueltig.')
+            );
+        }
+
+        $idAddressDelivery = (int) $this->context->cart->id_address_delivery;
+        $address = new Address($idAddressDelivery);
+        if (!Validate::isLoadedObject($address)) {
+            return $this->finalizeMrzValidationResult($docType, false, $this->l('Lieferadresse konnte nicht geladen werden.'));
+        }
+
+        $nameCheck = MrzValidator::matchNames($address->firstname, $address->lastname, $validation['data']);
+        if (empty($nameCheck['valid'])) {
+            return $this->finalizeMrzValidationResult($docType, false, $this->l('Name und Vorname der Lieferadresse stimmen nicht mit der MRZ ueberein.'));
+        }
+
+        $adultCheck = MrzValidator::isAdult($validation['data']['birth_date'], 18);
+        if (empty($adultCheck['valid'])) {
+            return $this->finalizeMrzValidationResult($docType, false, $this->l('Bestellung nur fuer volljaehrige Personen (18+).'));
+        }
+
+        if ($persistOnSuccess) {
+            $verificationData = [
+                'carrier_id' => $carrierId,
+                'carrier_reference' => $carrierReference,
+                'doc_type' => $docType,
+                'birth_date' => $validation['data']['birth_iso'],
+                'firstname' => (string) $address->firstname,
+                'lastname' => (string) $address->lastname,
+            ];
+
+            if ($this->context->customer->isLogged()) {
+                $idCustomer = (int) $this->context->customer->id;
+                if (!$this->setCustomerVerified($idCustomer, $verificationData)) {
+                    return $this->finalizeMrzValidationResult($docType, false, $this->l('Verifikationsstatus konnte nicht gespeichert werden.'));
+                }
+            } else {
+                $this->setCheckoutVerificationState($verificationData);
+            }
+        }
+
+        return $this->finalizeMrzValidationResult($docType, true, '');
     }
 
     private function validateCheckoutMrzIfRequired()
@@ -366,11 +527,17 @@ class Internautenav extends Module
 
     private function isAlreadyVerifiedForCheckout()
     {
+        $carrier = $this->getCurrentCheckoutCarrier();
+        if (!$carrier) {
+            $this->clearCheckoutVerificationState();
+            return false;
+        }
+
         if ($this->context->customer->isLogged()) {
             return $this->isCustomerVerified((int) $this->context->customer->id);
         }
 
-        return $this->isGuestVerified();
+        return $this->isCheckoutVerifiedForCarrier($carrier['id'], $carrier['reference']);
     }
 
     private function extractMrzPayloadForCarrier($carrierId)
@@ -405,6 +572,10 @@ class Internautenav extends Module
     private function resolveSelectedCarrierId()
     {
         $deliveryOption = Tools::getValue('delivery_option');
+        if (empty($deliveryOption) && Validate::isLoadedObject($this->context->cart)) {
+            $deliveryOption = $this->context->cart->getDeliveryOption();
+        }
+
         if (is_array($deliveryOption)) {
             $first = reset($deliveryOption);
         } else {
@@ -456,18 +627,91 @@ class Internautenav extends Module
 
     private function setGuestVerificationInSession(array $data)
     {
-        $_SESSION['internautenav_guest_verified'] = true;
-        $_SESSION['internautenav_guest_data'] = [
-            'doc_type' => (string) $data['doc_type'],
-            'birth_date' => (string) $data['birth_date'],
-            'firstname' => (string) $data['firstname'],
-            'lastname' => (string) $data['lastname'],
-        ];
+        $this->setCheckoutVerificationState($data);
     }
 
     private function isGuestVerified()
     {
-        return isset($_SESSION['internautenav_guest_verified']) && (bool) $_SESSION['internautenav_guest_verified'];
+        return $this->isAlreadyVerifiedForCheckout();
+    }
+
+    private function getCurrentCheckoutCarrier()
+    {
+        $carrierId = $this->resolveSelectedCarrierId();
+        if ($carrierId <= 0) {
+            return null;
+        }
+
+        $carrier = new Carrier($carrierId);
+        if (!Validate::isLoadedObject($carrier)) {
+            return null;
+        }
+
+        return [
+            'id' => (int) $carrier->id,
+            'reference' => (int) $carrier->id_reference,
+            'name' => (string) $carrier->name,
+            'required' => $this->isCarrierReferenceRequired((int) $carrier->id_reference),
+        ];
+    }
+
+    private function getCheckoutVerificationState()
+    {
+        if (!isset($_SESSION[self::SESSION_VERIFICATION_KEY]) || !is_array($_SESSION[self::SESSION_VERIFICATION_KEY])) {
+            return [];
+        }
+
+        return $_SESSION[self::SESSION_VERIFICATION_KEY];
+    }
+
+    private function setCheckoutVerificationState(array $data)
+    {
+        $carrier = $this->getCurrentCheckoutCarrier();
+        if (!$carrier) {
+            return;
+        }
+
+        $_SESSION[self::SESSION_VERIFICATION_KEY] = [
+            'verified' => true,
+            'cart_id' => (int) $this->context->cart->id,
+            'carrier_id' => (int) $carrier['id'],
+            'carrier_reference' => (int) $carrier['reference'],
+            'doc_type' => (string) ($data['doc_type'] ?? ''),
+            'birth_date' => (string) ($data['birth_date'] ?? ''),
+            'firstname' => (string) ($data['firstname'] ?? ''),
+            'lastname' => (string) ($data['lastname'] ?? ''),
+            'verified_at' => date('Y-m-d H:i:s'),
+        ];
+    }
+
+    private function clearCheckoutVerificationState()
+    {
+        if (isset($_SESSION[self::SESSION_VERIFICATION_KEY])) {
+            unset($_SESSION[self::SESSION_VERIFICATION_KEY]);
+        }
+
+        unset($_SESSION['internautenav_guest_verified'], $_SESSION['internautenav_guest_data']);
+    }
+
+    private function isCheckoutVerifiedForCarrier($carrierId, $carrierReference)
+    {
+        $state = $this->getCheckoutVerificationState();
+        if (empty($state)) {
+            return false;
+        }
+
+        $cartId = Validate::isLoadedObject($this->context->cart) ? (int) $this->context->cart->id : 0;
+        $isValid = !empty($state['verified'])
+            && (int) ($state['cart_id'] ?? 0) === $cartId
+            && (int) ($state['carrier_id'] ?? 0) === (int) $carrierId
+            && (int) ($state['carrier_reference'] ?? 0) === (int) $carrierReference;
+
+        if (!$isValid) {
+            $this->clearCheckoutVerificationState();
+            return false;
+        }
+
+        return true;
     }
 
     private function installDatabase()
@@ -483,14 +727,110 @@ class Internautenav extends Module
             PRIMARY KEY (`id_customer`)
         ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8mb4;';
 
-        return Db::getInstance()->execute($sql);
+        return Db::getInstance()->execute($sql) && $this->ensureVerificationLogTable();
     }
 
     private function uninstallDatabase()
     {
         $sql = 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . self::DB_TABLE . '`;';
+        $logSql = 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '`;';
+
+        return Db::getInstance()->execute($sql) && Db::getInstance()->execute($logSql);
+    }
+
+    private function ensureVerificationLogTable()
+    {
+        $sql = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '` (
+            `id_internautenav_verification_log` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+            `customer_reference` VARCHAR(64) NOT NULL,
+            `id_customer` INT(10) UNSIGNED NULL,
+            `id_guest` INT(10) UNSIGNED NULL,
+            `id_cart` INT(10) UNSIGNED NULL,
+            `doc_type` VARCHAR(16) NOT NULL,
+            `result` TINYINT(1) UNSIGNED NOT NULL,
+            `result_message` VARCHAR(255) NULL,
+            `checked_at` DATETIME NOT NULL,
+            PRIMARY KEY (`id_internautenav_verification_log`),
+            KEY `idx_customer_reference` (`customer_reference`),
+            KEY `idx_checked_at` (`checked_at`)
+        ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8mb4;';
 
         return Db::getInstance()->execute($sql);
+    }
+
+    private function finalizeMrzValidationResult($docType, $isValid, $message)
+    {
+        $this->logMrzVerificationAttempt((string) $docType, (bool) $isValid, (string) $message);
+
+        $result = [
+            'valid' => (bool) $isValid,
+        ];
+
+        if (!$isValid && $message !== '') {
+            $result['message'] = (string) $message;
+        }
+
+        return $result;
+    }
+
+    private function logMrzVerificationAttempt($docType, $isValid, $message)
+    {
+        if (!$this->ensureVerificationLogTable()) {
+            return false;
+        }
+
+        $subject = $this->getVerificationLogSubject();
+
+        return Db::getInstance()->insert(self::DB_LOG_TABLE, [
+            'customer_reference' => pSQL($subject['customer_reference']),
+            'id_customer' => $subject['id_customer'] > 0 ? (int) $subject['id_customer'] : null,
+            'id_guest' => $subject['id_guest'] > 0 ? (int) $subject['id_guest'] : null,
+            'id_cart' => $subject['id_cart'] > 0 ? (int) $subject['id_cart'] : null,
+            'doc_type' => pSQL((string) $docType),
+            'result' => (int) $isValid,
+            'result_message' => $message !== '' ? pSQL((string) $message) : null,
+            'checked_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    private function getVerificationLogSubject()
+    {
+        $idCustomer = 0;
+        if (Validate::isLoadedObject($this->context->customer)) {
+            $idCustomer = (int) $this->context->customer->id;
+        }
+
+        $idGuest = 0;
+        if (Validate::isLoadedObject($this->context->cart)) {
+            $idGuest = (int) $this->context->cart->id_guest;
+        }
+
+        $idCart = Validate::isLoadedObject($this->context->cart) ? (int) $this->context->cart->id : 0;
+
+        if ($idCustomer > 0) {
+            return [
+                'customer_reference' => 'customer-' . $idCustomer,
+                'id_customer' => $idCustomer,
+                'id_guest' => $idGuest,
+                'id_cart' => $idCart,
+            ];
+        }
+
+        if ($idGuest > 0) {
+            return [
+                'customer_reference' => 'guest-' . $idGuest,
+                'id_customer' => 0,
+                'id_guest' => $idGuest,
+                'id_cart' => $idCart,
+            ];
+        }
+
+        return [
+            'customer_reference' => 'guest-cart-' . $idCart,
+            'id_customer' => 0,
+            'id_guest' => 0,
+            'id_cart' => $idCart,
+        ];
     }
 
     public function isCustomerVerified($idCustomer)

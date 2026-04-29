@@ -67,8 +67,12 @@ class MrzValidator
             ];
         }
 
-        $firstMatches = ($shippingFirst === $mrzFirst) || (strpos($mrzFirst, $shippingFirst) !== false);
-        $lastMatches = ($shippingLast === $mrzLast) || (strpos($mrzLast, $shippingLast) !== false) || (strpos($shippingLast, $mrzLast) !== false);
+        $firstMatches = ($shippingFirst === $mrzFirst)
+            || (strpos($mrzFirst, $shippingFirst) !== false)
+            || (strpos($shippingFirst, $mrzFirst) !== false);
+        $lastMatches = ($shippingLast === $mrzLast)
+            || (strpos($mrzLast, $shippingLast) !== false)
+            || (strpos($shippingLast, $mrzLast) !== false);
 
         if (!$firstMatches || !$lastMatches) {
             return [
@@ -201,6 +205,14 @@ class MrzValidator
     private static function normalizeNameCompact($value)
     {
         $value = strtoupper((string) $value);
+
+        // Expand German/Swiss umlauts the same way MRZ documents do
+        $umlauts = [
+            'Ä' => 'AE', 'Ö' => 'OE', 'Ü' => 'UE',
+            'ä' => 'AE', 'ö' => 'OE', 'ü' => 'UE',
+            'ß' => 'SS',
+        ];
+        $value = strtr($value, $umlauts);
 
         if (function_exists('iconv')) {
             $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
