@@ -98,7 +98,7 @@
           <button type="button" class="btn btn-secondary js-internautenav-close">
             {$internautenav_modal_close|escape:'htmlall':'UTF-8'}
           </button>
-          <button type="submit" class="btn btn-primary js-internautenav-submit">
+          <button type="button" class="btn btn-primary js-internautenav-submit">
             {$internautenav_modal_submit|escape:'htmlall':'UTF-8'}
           </button>
         </div>

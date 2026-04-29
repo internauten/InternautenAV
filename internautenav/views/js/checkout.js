@@ -17,6 +17,10 @@ document.addEventListener('DOMContentLoaded', function () {
         return gate.querySelector('.js-internautenav-modal-form');
     }
 
+    function getSubmitButton(gate) {
+        return gate.querySelector('.js-internautenav-submit');
+    }
+
     function getDocTypeSelect(gate) {
         return gate.querySelector('.js-internautenav-doc-type');
     }
@@ -222,18 +226,18 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .then(function (result) {
                 if (!result || result.valid !== true) {
+                    setBusy(gate, false);
                     showError(gate, result && result.message ? result.message : 'MRZ-Pruefung fehlgeschlagen.');
                     return;
                 }
 
+                setBusy(gate, false);
                 setPaymentLocked(gate, false);
                 closeModal(gate);
             })
             .catch(function () {
-                showError(gate, 'Die Pruefung ist momentan nicht verfuegbar. Bitte erneut versuchen.');
-            })
-            .finally(function () {
                 setBusy(gate, false);
+                showError(gate, 'Die Pruefung ist momentan nicht verfuegbar. Bitte erneut versuchen.');
             });
     }
 
@@ -275,6 +279,26 @@ document.addEventListener('DOMContentLoaded', function () {
         var form = getModalForm(gate);
         if (form) {
             form.addEventListener('submit', function (event) {
+                event.stopPropagation();
+                handleModalSubmit(gate, event);
+            });
+
+            form.addEventListener('keydown', function (event) {
+                if (event.key !== 'Enter') {
+                    return;
+                }
+
+                if (event.target && event.target.tagName === 'TEXTAREA') {
+                    return;
+                }
+
+                handleModalSubmit(gate, event);
+            });
+        }
+
+        var submitButton = getSubmitButton(gate);
+        if (submitButton) {
+            submitButton.addEventListener('click', function (event) {
                 handleModalSubmit(gate, event);
             });
         }
