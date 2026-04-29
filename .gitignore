@@ -1,0 +1,73 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.code-workspace
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+logs/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# Archives / build artifacts
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# Dependencies
+vendor/
+node_modules/
+
+# Composer
+composer.phar
+
+# PHP / cache / temp
+*.cache
+*.tmp
+*.temp
+tmp/
+cache/
+
+# PHPUnit / tooling
+.phpunit.result.cache
+coverage/
+
+# PrestaShop generated caches and runtime files
+**/var/cache/
+**/var/logs/
+**/var/sessions/
+**/app/cache/
+**/app/logs/
+**/cache/smarty/cache/
+**/cache/smarty/compile/
+**/img/tmp/
+**/download/
+**/upload/
+
+# PrestaShop local config overrides (may contain credentials)
+app/config/parameters.php
+config/settings.inc.php
+
+# Local test/debug outputs
+debug-output/
+
+# Keep repository clean from generated local module packages
+internautenav.zip
