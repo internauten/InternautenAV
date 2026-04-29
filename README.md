@@ -65,3 +65,32 @@ Modul zur MRZ-basierten Alters- und Identitaetspruefung fuer ausgewaehlte Versan
   - `PREFIX_internautenav_customer_verification`
 - JavaScript wird inline im Template geladen (Fallback für Hook-Probleme)
 
+## Develope
+
+Dammit die Container bei jedem neuen Modul nicht jedesmal neu erstellt werden müssen, versuchen wir es mit symlinks.
+
+Voraussetzungen: im compose hat es unter volumes einen Eintrag - /home/dmo/internauten:/internauten
+
+1. Bash ins WSL2 und holen des Repos aus dem fork
+   ```bash
+   cd ~/internauten
+   git clone https://github.com/yourgithub/InternautenAV.git
+   ```
+2. set owner, goup and rights
+   ```bash
+   sudo chown -R www-data:www-data ~/internauten/InternautenAV/internautenav
+   sudo chmod -R go+w ~/internauten/InternautenAV/internautenav
+   ```
+3. Bash in den Container und create symlink and set group:owner
+   ```bash
+   ln -s /internauten/InternautenAV/internautenav /var/www/html/modules/internautenav
+   chown -h www-data:www-data /var/www/html/modules/internautenav
+   ```
+4. Activate and configure Module in Prestashop  
+   In Prestashop backend go to Module Manager / not installed Modules and install the module.
+
+## License
+
+This project is licensed under the MIT License. See details [`LICENSE`](LICENSE).
+
+Copyright (c) 2026 die.internauten.ch GmbH

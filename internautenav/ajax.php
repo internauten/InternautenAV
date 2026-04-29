@@ -1,7 +1,51 @@
 <?php
 
-require_once dirname(__FILE__) . '/../../config/config.inc.php';
-require_once dirname(__FILE__) . '/../../init.php';
+$shopRoot = null;
+$candidates = [
+    __DIR__,
+    realpath(__DIR__) ?: '',
+    dirname(__DIR__),
+    dirname(dirname(__DIR__)),
+    getenv('PS_ROOT_DIR') ?: '',
+    getenv('PRESTASHOP_ROOT') ?: '',
+    isset($_SERVER['DOCUMENT_ROOT']) ? (string) $_SERVER['DOCUMENT_ROOT'] : '',
+    isset($_SERVER['CONTEXT_DOCUMENT_ROOT']) ? (string) $_SERVER['CONTEXT_DOCUMENT_ROOT'] : '',
+    isset($_SERVER['SCRIPT_FILENAME']) ? dirname((string) $_SERVER['SCRIPT_FILENAME']) : '',
+];
+
+$visited = [];
+foreach ($candidates as $candidate) {
+    if ($candidate === '') {
+        continue;
+    }
+
+    $searchDir = $candidate;
+    for ($i = 0; $i < 10; $i++) {
+        if (isset($visited[$searchDir])) {
+            break;
+        }
+        $visited[$searchDir] = true;
+
+        if (is_file($searchDir . '/config/config.inc.php') && is_file($searchDir . '/init.php')) {
+            $shopRoot = $searchDir;
+            break 2;
+        }
+
+        $parent = dirname($searchDir);
+        if ($parent === $searchDir) {
+            break;
+        }
+        $searchDir = $parent;
+    }
+}
+
+if ($shopRoot === null) {
+    http_response_code(500);
+    exit('PrestaShop root not found');
+}
+
+require_once $shopRoot . '/config/config.inc.php';
+require_once $shopRoot . '/init.php';
 
 if (!defined('_PS_VERSION_')) {
     exit('No direct script access');

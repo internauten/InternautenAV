@@ -105,7 +105,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         var hasHookBox = document.querySelector('.internautenav-mrz-box[data-carrier-id="' + selectedCarrierId + '"]');
         if (hasHookBox) {
-            hideInactiveAjaxContainers(null);
+            hideInactiveAjaxContainers(selectedCarrierId);
+
+            var activeContainer = document.getElementById('internautenav-ajax-container-' + selectedCarrierId);
+            if (activeContainer) {
+                activeContainer.style.display = '';
+            }
             return;
         }
 
