@@ -3,69 +3,61 @@
 global $_MODULE;
 $_MODULE = array();
 
-// Module Info
-$_MODULE['<{internautenav}prestashop>module_display_name'] = 'Internauten AV';
-$_MODULE['<{internautenav}prestashop>module_description'] = 'Verifica MRZ per i metodi di spedizione selezionati (Carta d\'identità CH, Passaporto CH, Passaporto UE).';
-
-// Backoffice - Configuration
-$_MODULE['<{internautenav}prestashop>backoffice_settings_saved'] = 'Impostazioni salvate.';
-$_MODULE['<{internautenav}prestashop>backoffice_title'] = 'Verifica MRZ per metodo di spedizione';
-$_MODULE['<{internautenav}prestashop>backoffice_description'] = 'Selezionare i metodi di spedizione per i quali la verifica MRZ deve essere obbligatoria al momento del pagamento.';
-$_MODULE['<{internautenav}prestashop>backoffice_label'] = 'Metodi di spedizione con verifica MRZ richiesta';
-$_MODULE['<{internautenav}prestashop>backoffice_help'] = 'Salvato utilizzando id_reference per una selezione stabile durante la creazione di nuovi corrieri.';
-$_MODULE['<{internautenav}prestashop>backoffice_save_button'] = 'Salva';
-
-// Backoffice - Debug Log
-$_MODULE['<{internautenav}prestashop>debug_log_title'] = 'Debug: Log di verifica (ultimi 200 elementi)';
-$_MODULE['<{internautenav}prestashop>debug_log_empty'] = 'Nessun elemento.';
-$_MODULE['<{internautenav}prestashop>debug_log_col_id'] = 'ID';
-$_MODULE['<{internautenav}prestashop>debug_log_col_timestamp'] = 'Data/Ora';
-$_MODULE['<{internautenav}prestashop>debug_log_col_reference'] = 'Riferimento';
-$_MODULE['<{internautenav}prestashop>debug_log_col_customer'] = 'Cliente';
-$_MODULE['<{internautenav}prestashop>debug_log_col_cart'] = 'id_cart';
-$_MODULE['<{internautenav}prestashop>debug_log_col_doc'] = 'Documento';
-$_MODULE['<{internautenav}prestashop>debug_log_col_result'] = 'Risultato';
-$_MODULE['<{internautenav}prestashop>debug_log_col_message'] = 'Messaggio';
-$_MODULE['<{internautenav}prestashop>debug_log_result_ok'] = 'OK';
-$_MODULE['<{internautenav}prestashop>debug_log_result_fail'] = 'Errore';
-
-// Backoffice - Persistent Verifications
-$_MODULE['<{internautenav}prestashop>debug_persistent_title'] = 'Debug: Verifiche archiviate (clienti collegati)';
-$_MODULE['<{internautenav}prestashop>debug_persistent_col_id'] = 'ID';
-$_MODULE['<{internautenav}prestashop>debug_persistent_col_customer_id'] = 'id_customer';
-$_MODULE['<{internautenav}prestashop>debug_persistent_col_name'] = 'Cliente';
-$_MODULE['<{internautenav}prestashop>debug_persistent_col_email'] = 'Email';
-$_MODULE['<{internautenav}prestashop>debug_persistent_col_doc'] = 'Documento';
-$_MODULE['<{internautenav}prestashop>debug_persistent_col_birth'] = 'Data di nascita';
-$_MODULE['<{internautenav}prestashop>debug_persistent_col_verified'] = 'verified_at';
-
-// Frontend - Payment Gate
-$_MODULE['<{internautenav}prestashop>payment_title'] = 'Verifica dell\'età per questo metodo di spedizione';
-$_MODULE['<{internautenav}prestashop>payment_intro'] = 'Per il metodo di spedizione selezionato è richiesta la verifica dell\'età e dell\'identità tramite MRZ prima del pagamento.';
-$_MODULE['<{internautenav}prestashop>payment_link'] = 'Avvia verifica MRZ';
-$_MODULE['<{internautenav}prestashop>payment_success'] = 'Verifica MRZ completata con successo. Il pagamento è sbloccato.';
-$_MODULE['<{internautenav}prestashop>payment_locked'] = 'I campi di pagamento rimangono bloccati fino alla ricezione lato server di una verifica riuscita.';
-
-// Frontend - Modal
-$_MODULE['<{internautenav}prestashop>modal_title'] = 'Inserisci dati MRZ';
-$_MODULE['<{internautenav}prestashop>modal_close'] = 'Chiudi';
-$_MODULE['<{internautenav}prestashop>modal_submit'] = 'Verifica ora';
-$_MODULE['<{internautenav}prestashop>modal_hint'] = 'Inserisci le righe esattamente come nel documento, incluso <.';
-
-// Frontend - Form Fields
-$_MODULE['<{internautenav}prestashop>form_doc_label'] = 'Tipo di documento';
-$_MODULE['<{internautenav}prestashop>form_doc_ch_id'] = 'Carta d\'identità svizzera (3 righe)';
-$_MODULE['<{internautenav}prestashop>form_doc_ch_pass'] = 'Passaporto svizzero (2 righe)';
-$_MODULE['<{internautenav}prestashop>form_doc_eu_pass'] = 'Passaporto UE (2 righe)';
-$_MODULE['<{internautenav}prestashop>form_line1_label'] = 'Riga MRZ 1';
-$_MODULE['<{internautenav}prestashop>form_line2_label'] = 'Riga MRZ 2';
-$_MODULE['<{internautenav}prestashop>form_line3_label'] = 'Riga MRZ 3 (solo carta d\'identità svizzera)';
-
-// Validation Errors
-$_MODULE['<{internautenav}prestashop>error_invalid_carrier'] = 'Corriere non valido.';
-$_MODULE['<{internautenav}prestashop>error_carrier_not_found'] = 'Corriere non trovato.';
-$_MODULE['<{internautenav}prestashop>error_mrz_invalid'] = 'MRZ non valido.';
-$_MODULE['<{internautenav}prestashop>error_address_not_found'] = 'Impossibile caricare l\'indirizzo di spedizione.';
-$_MODULE['<{internautenav}prestashop>error_name_mismatch'] = 'Il nome e cognome dell\'indirizzo di spedizione non corrisponde ai dati MRZ.';
-$_MODULE['<{internautenav}prestashop>error_age_check'] = 'Ordini solo per maggiorenni (18+).';
-$_MODULE['<{internautenav}prestashop>error_default'] = 'La verifica non è al momento disponibile. Riprovare.';
+$_MODULE['<{internautenav}prestashop>internautenav_a5ffbe10bf416c7db8773f0ed801a022'] = 'Internauten AV';
+$_MODULE['<{internautenav}prestashop>internautenav_62e5cde27ad49944de104bbe346fd8e8'] = 'Verifica MRZ per i metodi di spedizione selezionati (Carta d\'identità CH, Passaporto CH, Passaporto UE).';
+$_MODULE['<{internautenav}prestashop>internautenav_8772abeeb22a696d9439488aea151b30'] = 'Impostazioni salvate.';
+$_MODULE['<{internautenav}prestashop>internautenav_791da7ecc6ea9308043f5cff02ae7a57'] = 'Verifica MRZ per metodo di spedizione';
+$_MODULE['<{internautenav}prestashop>internautenav_f904a95613f2b63674e0e3990224bd75'] = 'Selezionare i metodi di spedizione per i quali la verifica MRZ deve essere obbligatoria al momento del pagamento.';
+$_MODULE['<{internautenav}prestashop>internautenav_66d7cf1d3d184e963a010af1384220d5'] = 'Metodi di spedizione con verifica MRZ richiesta';
+$_MODULE['<{internautenav}prestashop>internautenav_bb4935589d0c451d0944e4679da19ef5'] = 'Salvato utilizzando id_reference per una selezione stabile durante la creazione di nuovi corrieri.';
+$_MODULE['<{internautenav}prestashop>internautenav_2e994118b559cda7f6c20a2a57df37a8'] = 'Salva';
+$_MODULE['<{internautenav}prestashop>internautenav_09b1cfecdc6405f0e9c5ec1c25194748'] = 'Debug: Log di verifica (ultimi 200 elementi)';
+$_MODULE['<{internautenav}prestashop>internautenav_434657b33f308d7d74f8b0cddbd74d5e'] = 'Nessun elemento.';
+$_MODULE['<{internautenav}prestashop>internautenav_4b6a9d37952236c9796ac3f2af38b842'] = 'ID';
+$_MODULE['<{internautenav}prestashop>internautenav_99083979538e0ecab680c1ad3c9ad5df'] = 'Data/Ora';
+$_MODULE['<{internautenav}prestashop>internautenav_ad3b5a371c80c46e9174434842e8fc12'] = 'Riferimento';
+$_MODULE['<{internautenav}prestashop>internautenav_abababcfd78d8af64e524ccb1554e3c1'] = 'Cliente';
+$_MODULE['<{internautenav}prestashop>internautenav_de7b4828c2490bcd3aa8b8cd3a13a0ee'] = 'id_cart';
+$_MODULE['<{internautenav}prestashop>internautenav_556c2d526d6596893f7af1cc9ff01be8'] = 'Documento';
+$_MODULE['<{internautenav}prestashop>internautenav_cda38298e8f275809893a0bd3545c5fd'] = 'Risultato';
+$_MODULE['<{internautenav}prestashop>internautenav_faee1c5fcd3360599c81fc690f472615'] = 'Messaggio';
+$_MODULE['<{internautenav}prestashop>internautenav_12984c026d7246fb51046ff07ef45071'] = 'OK';
+$_MODULE['<{internautenav}prestashop>internautenav_cb7e970702f3a3d21ab2330e787825db'] = 'Errore';
+$_MODULE['<{internautenav}prestashop>internautenav_1866815253967b3edeb9144bec9d7b5a'] = 'Debug: Verifiche archiviate (clienti collegati)';
+$_MODULE['<{internautenav}prestashop>internautenav_d003b7fe1afb80a2dc36c5c55f2289a1'] = 'ID';
+$_MODULE['<{internautenav}prestashop>internautenav_c734f60564acfcb4a7b12a9bf115ac5b'] = 'id_customer';
+$_MODULE['<{internautenav}prestashop>internautenav_e1794a8a9e2716a902a891151b4c91dd'] = 'Cliente';
+$_MODULE['<{internautenav}prestashop>internautenav_7ca8b69f1540971e9cccb285af01a16b'] = 'Email';
+$_MODULE['<{internautenav}prestashop>internautenav_9556785e47a42aa7abefb818b02e9ac8'] = 'Documento';
+$_MODULE['<{internautenav}prestashop>internautenav_6e40cafd160180f83edfb5cdd288eed4'] = 'Data di nascita';
+$_MODULE['<{internautenav}prestashop>internautenav_ea91b27727fc288ef1dd33ab51e8384f'] = 'verified_at';
+$_MODULE['<{internautenav}prestashop>internautenav_481428a19732009990c4bac9de10dc37'] = 'Verifica dell\'età per questo metodo di spedizione';
+$_MODULE['<{internautenav}prestashop>internautenav_1e8c192b93b08e816a1b9df13a66b5a0'] = 'Per il metodo di spedizione selezionato è richiesta la verifica dell\'età e dell\'identità tramite MRZ prima del pagamento.';
+$_MODULE['<{internautenav}prestashop>internautenav_ced123c28ff6715c302676ffd917d7a9'] = 'Avvia verifica MRZ';
+$_MODULE['<{internautenav}prestashop>internautenav_3c2e70ff78ce52edb12afc7a5c1b277f'] = 'Verifica MRZ completata con successo. Il pagamento è sbloccato.';
+$_MODULE['<{internautenav}prestashop>internautenav_45c6662501837c3083030260413f34df'] = 'I campi di pagamento rimangono bloccati fino alla ricezione lato server di una verifica riuscita.';
+$_MODULE['<{internautenav}prestashop>internautenav_448d315158bc82c3f64ceb007056fd0b'] = 'Inserisci dati MRZ';
+$_MODULE['<{internautenav}prestashop>internautenav_c691329cd3e16f8d829813b5feb2b451'] = 'Chiudi';
+$_MODULE['<{internautenav}prestashop>internautenav_a1f8eac04d0be0521423b13bd3e78b16'] = 'Verifica ora';
+$_MODULE['<{internautenav}prestashop>internautenav_4086ac267cc51dcffd8581677232ee9c'] = 'Inserisci le righe esattamente come nel documento, incluso <.';
+$_MODULE['<{internautenav}prestashop>internautenav_287406fe9a6e57317fc5a5795e6f2900'] = 'Tipo di documento';
+$_MODULE['<{internautenav}prestashop>internautenav_12309f0fc1ad868231073aef2aa31ab9'] = 'Carta d\'identità svizzera (3 righe)';
+$_MODULE['<{internautenav}prestashop>internautenav_083559e45e69f446341bde604c601818'] = 'Passaporto svizzero (2 righe)';
+$_MODULE['<{internautenav}prestashop>internautenav_bb60cfb540fd0525cf15dfe0afd27505'] = 'Passaporto UE (2 righe)';
+$_MODULE['<{internautenav}prestashop>internautenav_c8afc51d042bea02c016d50f701cf52f'] = 'Riga MRZ 1';
+$_MODULE['<{internautenav}prestashop>internautenav_ba42beea11a66e21bc73f4b953e82548'] = 'Riga MRZ 2';
+$_MODULE['<{internautenav}prestashop>internautenav_3295794b75985b99452e318bbbb12036'] = 'Riga MRZ 3 (solo carta d\'identità svizzera)';
+$_MODULE['<{internautenav}prestashop>internautenav_bb44afc81b90a205c5864f98a960b904'] = 'Corriere non valido.';
+$_MODULE['<{internautenav}prestashop>internautenav_78150523e5650cb6f3ea03b1dd73775c'] = 'Corriere non trovato.';
+$_MODULE['<{internautenav}prestashop>internautenav_c5a14f3a639b8c02437f66ee647370a2'] = 'MRZ non valido.';
+$_MODULE['<{internautenav}prestashop>internautenav_713c2cd1033c540b3a7d6c6402470316'] = 'Impossibile caricare l\'indirizzo di spedizione.';
+$_MODULE['<{internautenav}prestashop>internautenav_19c37bf873a1374d8ff585c2e71bc8fa'] = 'Il nome e cognome dell\'indirizzo di spedizione non corrisponde ai dati MRZ.';
+$_MODULE['<{internautenav}prestashop>internautenav_17b072d005eef757b74408b185055f31'] = 'Ordini solo per maggiorenni (18+).';
+$_MODULE['<{internautenav}prestashop>internautenav_aa8581a5f308de1729fac7ee4405cc0b'] = 'La verifica non è al momento disponibile. Riprovare.';
+$_MODULE['<{internautenav}prestashop>internautenav_4b1b5751f62dfce90d3afcdfa31f9221'] = 'Internauten AV';
+$_MODULE['<{internautenav}prestashop>internautenav_a08aeb86736558f29ad326fe2664dd71'] = 'Verifica MRZ per i metodi di spedizione selezionati (Carta d\'identità CH, Passaporto CH, Passaporto UE).';
+$_MODULE['<{internautenav}prestashop>internautenav_e9b93268b4c838702220c7c939778f2e'] = 'Impossibile salvare lo stato di verifica.';
+$_MODULE['<{internautenav}prestashop>internautenav_8774f43079b162159ad6e9d9b6deb13b'] = 'Seleziona il tipo di documento.';
+$_MODULE['<{internautenav}prestashop>internautenav_6b2fce74c9562749070ef0445341eb66'] = 'Impossibile caricare l\'indirizzo di spedizione.';
+$_MODULE['<{internautenav}prestashop>internautenav_dc8b31613c557c6d9d125b8406d3d9ca'] = 'Il nome e cognome dell\'indirizzo di spedizione non corrisponde ai dati MRZ.';
+$_MODULE['<{internautenav}prestashop>internautenav_92f8f8106ab0a1fc895786924d69ab7c'] = 'Ordini solo per maggiorenni (18+).';
