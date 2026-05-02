@@ -61,3 +61,13 @@ $_MODULE['<{internautenav}prestashop>internautenav_8774f43079b162159ad6e9d9b6deb
 $_MODULE['<{internautenav}prestashop>internautenav_6b2fce74c9562749070ef0445341eb66'] = 'Lieferadresse konnte nicht geladen werden.';
 $_MODULE['<{internautenav}prestashop>internautenav_dc8b31613c557c6d9d125b8406d3d9ca'] = 'Name und Vorname der Lieferadresse stimmen nicht mit der MRZ ueberein.';
 $_MODULE['<{internautenav}prestashop>internautenav_92f8f8106ab0a1fc895786924d69ab7c'] = 'Bestellung nur fuer volljaehrige Personen (18+).';
+
+$_MODULE['<{internautenav}prestashop>ajax_1e8c192b93b08e816a1b9df13a66b5a0'] = 'Fuer die gewaehlte Versandart ist vor der Zahlung eine Alters- und Identitaetspruefung erforderlich.';
+$_MODULE['<{internautenav}prestashop>ajax_287406fe9a6e57317fc5a5795e6f2900'] = 'Dokumenttyp';
+$_MODULE['<{internautenav}prestashop>ajax_12309f0fc1ad868231073aef2aa31ab9'] = 'Schweizer ID (3 Zeilen)';
+$_MODULE['<{internautenav}prestashop>ajax_083559e45e69f446341bde604c601818'] = 'Schweizer Pass (2 Zeilen)';
+$_MODULE['<{internautenav}prestashop>ajax_bb60cfb540fd0525cf15dfe0afd27505'] = 'EU Pass (2 Zeilen)';
+$_MODULE['<{internautenav}prestashop>ajax_c8afc51d042bea02c016d50f701cf52f'] = 'MRZ Zeile 1';
+$_MODULE['<{internautenav}prestashop>ajax_ba42beea11a66e21bc73f4b953e82548'] = 'MRZ Zeile 2';
+$_MODULE['<{internautenav}prestashop>ajax_3295794b75985b99452e318bbbb12036'] = 'MRZ Zeile 3 (nur CH ID)';
+$_MODULE['<{internautenav}prestashop>ajax_4086ac267cc51dcffd8581677232ee9c'] = 'Bitte Zeilen exakt wie im Dokument inklusive < eingeben.';

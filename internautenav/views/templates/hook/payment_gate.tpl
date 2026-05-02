@@ -53,42 +53,92 @@
           </select>
         </div>
 
-        <div class="form-group internautenav-group">
-          <label for="internautenav_modal_line1_{$internautenav_carrier_id|intval}">{$internautenav_line1_label|escape:'htmlall':'UTF-8'}</label>
-          <input
-            id="internautenav_modal_line1_{$internautenav_carrier_id|intval}"
-            class="form-control"
-            type="text"
-            name="internautenav_modal_line1"
-            autocomplete="off"
-            maxlength="44"
-            required
-          >
+        <div class="js-internautenav-doc-fields" data-doc-type="ch_id" hidden>
+          <div class="form-group internautenav-group">
+            <label for="internautenav_modal_ch_id_line1_{$internautenav_carrier_id|intval}">{$internautenav_line1_label|escape:'htmlall':'UTF-8'}</label>
+            <input
+              id="internautenav_modal_ch_id_line1_{$internautenav_carrier_id|intval}"
+              class="form-control"
+              type="text"
+              name="internautenav_modal_line1"
+              autocomplete="off"
+              maxlength="30"
+            >
+          </div>
+          <div class="form-group internautenav-group">
+            <label for="internautenav_modal_ch_id_line2_{$internautenav_carrier_id|intval}">{$internautenav_line2_label|escape:'htmlall':'UTF-8'}</label>
+            <input
+              id="internautenav_modal_ch_id_line2_{$internautenav_carrier_id|intval}"
+              class="form-control"
+              type="text"
+              name="internautenav_modal_line2"
+              autocomplete="off"
+              maxlength="30"
+            >
+          </div>
+          <div class="form-group internautenav-group">
+            <label for="internautenav_modal_ch_id_line3_{$internautenav_carrier_id|intval}">{$internautenav_line3_label|escape:'htmlall':'UTF-8'}</label>
+            <input
+              id="internautenav_modal_ch_id_line3_{$internautenav_carrier_id|intval}"
+              class="form-control"
+              type="text"
+              name="internautenav_modal_line3"
+              autocomplete="off"
+              maxlength="30"
+              data-prefill="{$internautenav_line3_prefill|default:''|escape:'htmlall':'UTF-8'}"
+            >
+          </div>
         </div>
 
-        <div class="form-group internautenav-group">
-          <label for="internautenav_modal_line2_{$internautenav_carrier_id|intval}">{$internautenav_line2_label|escape:'htmlall':'UTF-8'}</label>
-          <input
-            id="internautenav_modal_line2_{$internautenav_carrier_id|intval}"
-            class="form-control"
-            type="text"
-            name="internautenav_modal_line2"
-            autocomplete="off"
-            maxlength="44"
-            required
-          >
+        <div class="js-internautenav-doc-fields" data-doc-type="ch_pass" hidden>
+          <div class="form-group internautenav-group">
+            <label for="internautenav_modal_ch_pass_line1_{$internautenav_carrier_id|intval}">{$internautenav_line1_label|escape:'htmlall':'UTF-8'}</label>
+            <input
+              id="internautenav_modal_ch_pass_line1_{$internautenav_carrier_id|intval}"
+              class="form-control"
+              type="text"
+              name="internautenav_modal_line1"
+              autocomplete="off"
+              maxlength="44"
+              data-prefill="{$internautenav_pass_line1_prefill|default:''|escape:'htmlall':'UTF-8'}"
+            >
+          </div>
+          <div class="form-group internautenav-group">
+            <label for="internautenav_modal_ch_pass_line2_{$internautenav_carrier_id|intval}">{$internautenav_line2_label|escape:'htmlall':'UTF-8'}</label>
+            <input
+              id="internautenav_modal_ch_pass_line2_{$internautenav_carrier_id|intval}"
+              class="form-control"
+              type="text"
+              name="internautenav_modal_line2"
+              autocomplete="off"
+              maxlength="44"
+            >
+          </div>
         </div>
 
-        <div class="form-group internautenav-group js-internautenav-line3-group" style="display:none;">
-          <label for="internautenav_modal_line3_{$internautenav_carrier_id|intval}">{$internautenav_line3_label|escape:'htmlall':'UTF-8'}</label>
-          <input
-            id="internautenav_modal_line3_{$internautenav_carrier_id|intval}"
-            class="form-control"
-            type="text"
-            name="internautenav_modal_line3"
-            autocomplete="off"
-            maxlength="30"
-          >
+        <div class="js-internautenav-doc-fields" data-doc-type="eu_pass" hidden>
+          <div class="form-group internautenav-group">
+            <label for="internautenav_modal_eu_pass_line1_{$internautenav_carrier_id|intval}">{$internautenav_line1_label|escape:'htmlall':'UTF-8'}</label>
+            <input
+              id="internautenav_modal_eu_pass_line1_{$internautenav_carrier_id|intval}"
+              class="form-control"
+              type="text"
+              name="internautenav_modal_line1"
+              autocomplete="off"
+              maxlength="44"
+            >
+          </div>
+          <div class="form-group internautenav-group">
+            <label for="internautenav_modal_eu_pass_line2_{$internautenav_carrier_id|intval}">{$internautenav_line2_label|escape:'htmlall':'UTF-8'}</label>
+            <input
+              id="internautenav_modal_eu_pass_line2_{$internautenav_carrier_id|intval}"
+              class="form-control"
+              type="text"
+              name="internautenav_modal_line2"
+              autocomplete="off"
+              maxlength="44"
+            >
+          </div>
         </div>
 
         <p class="internautenav-hint">{$internautenav_hint|escape:'htmlall':'UTF-8'}</p>

@@ -301,6 +301,8 @@ class Internautenav extends Module
             'internautenav_carrier_id' => $carrier['id'],
             'internautenav_carrier_name' => $carrier['name'],
             'internautenav_is_verified' => $isVerified,
+            'internautenav_line3_prefill' => $this->getDeliveryAddressMrzLine3Prefill(),
+            'internautenav_pass_line1_prefill' => $this->getDeliveryAddressSwissPassLine1Prefill(),
             'internautenav_payment_title' => $this->l('payment_title'),
             'internautenav_payment_intro' => $this->l('payment_intro'),
             'internautenav_payment_link' => $this->l('payment_link'),
@@ -341,6 +343,8 @@ class Internautenav extends Module
 
         $this->context->smarty->assign([
             'internautenav_carrier_id' => $carrierId,
+            'internautenav_line3_prefill' => $this->getDeliveryAddressMrzLine3Prefill(),
+            'internautenav_pass_line1_prefill' => $this->getDeliveryAddressSwissPassLine1Prefill(),
             'internautenav_intro' => $this->l('payment_intro'),
             'internautenav_doc_label' => $this->l('form_doc_label'),
             'internautenav_doc_ch_id' => $this->l('form_doc_ch_id'),
@@ -356,6 +360,148 @@ class Internautenav extends Module
         $this->debugLog('rendered carrier extra content length=' . Tools::strlen((string) $output));
 
         return $output;
+    }
+
+    public function getDeliveryAddressMrzLine3Prefill()
+    {
+        if (!Validate::isLoadedObject($this->context->cart)) {
+            return '';
+        }
+
+        $idAddressDelivery = (int) $this->context->cart->id_address_delivery;
+        if ($idAddressDelivery <= 0) {
+            return '';
+        }
+
+        $address = new Address($idAddressDelivery);
+        if (!Validate::isLoadedObject($address)) {
+            return '';
+        }
+
+        $surname = $this->normalizeMrzNamePart((string) $address->lastname);
+        $givenNames = $this->normalizeMrzNamePart((string) $address->firstname);
+
+        if ($surname === '' || $givenNames === '') {
+            return '';
+        }
+
+        return $this->buildSwissIdMrzLine3($surname, $givenNames);
+    }
+
+    public function getDeliveryAddressSwissPassLine1Prefill()
+    {
+        if (!Validate::isLoadedObject($this->context->cart)) {
+            return '';
+        }
+
+        $idAddressDelivery = (int) $this->context->cart->id_address_delivery;
+        if ($idAddressDelivery <= 0) {
+            return '';
+        }
+
+        $address = new Address($idAddressDelivery);
+        if (!Validate::isLoadedObject($address)) {
+            return '';
+        }
+
+        $surname = $this->normalizeMrzNamePart((string) $address->lastname);
+        $givenNames = $this->normalizeMrzNamePart((string) $address->firstname);
+
+        if ($surname === '' || $givenNames === '') {
+            return '';
+        }
+
+        return $this->buildSwissPassMrzLine1($surname, $givenNames);
+    }
+
+    private function buildSwissIdMrzLine3($surname, $givenNames)
+    {
+        $surname = (string) $surname;
+        $givenNames = (string) $givenNames;
+
+        if ($surname === '' || $givenNames === '') {
+            return '';
+        }
+
+        // TD1 name line: SURNAME<<GIVEN<NAMES then padded with '<' to 30 chars.
+        $maxLength = 30;
+        $nameBudget = $maxLength - 2; // reserve for "<<"
+
+        if (Tools::strlen($surname . $givenNames) > $nameBudget) {
+            // Keep surname priority but preserve at least one char for given names.
+            $surnameMax = $nameBudget - 1;
+            $surname = Tools::substr($surname, 0, $surnameMax);
+            $givenBudget = $nameBudget - Tools::strlen($surname);
+            if ($givenBudget < 1) {
+                $givenBudget = 1;
+            }
+            $givenNames = Tools::substr($givenNames, 0, $givenBudget);
+        }
+
+        $line3 = $surname . '<<' . $givenNames;
+
+        return str_pad($line3, $maxLength, '<');
+    }
+
+    private function buildSwissPassMrzLine1($surname, $givenNames)
+    {
+        $surname = (string) $surname;
+        $givenNames = (string) $givenNames;
+
+        if ($surname === '' || $givenNames === '') {
+            return '';
+        }
+
+        // Swiss passport prefill requested by user: PMCHE + SURNAME<<GIVEN<NAMES (44 chars total).
+        $prefix = 'PMCHE';
+        $nameBudget = 44 - Tools::strlen($prefix);
+
+        if (Tools::strlen($surname . $givenNames) > ($nameBudget - 2)) {
+            $surnameMax = ($nameBudget - 2) - 1;
+            $surname = Tools::substr($surname, 0, $surnameMax);
+            $givenBudget = ($nameBudget - 2) - Tools::strlen($surname);
+            if ($givenBudget < 1) {
+                $givenBudget = 1;
+            }
+            $givenNames = Tools::substr($givenNames, 0, $givenBudget);
+        }
+
+        $nameField = $surname . '<<' . $givenNames;
+        $nameField = str_pad($nameField, $nameBudget, '<');
+
+        return $prefix . $nameField;
+    }
+
+    private function normalizeMrzNamePart($value)
+    {
+        $value = (string) $value;
+        if ($value === '') {
+            return '';
+        }
+
+        $value = Tools::strtoupper($value);
+        $value = strtr($value, [
+            'Ä' => 'AE',
+            'Ö' => 'OE',
+            'Ü' => 'UE',
+            'ä' => 'AE',
+            'ö' => 'OE',
+            'ü' => 'UE',
+            'ß' => 'SS',
+        ]);
+
+        if (function_exists('iconv')) {
+            $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+            if (is_string($converted)) {
+                $value = $converted;
+            }
+        }
+
+        $value = preg_replace('/[^A-Z0-9]+/', '<', $value);
+        $value = trim((string) $value, '<');
+        $value = preg_replace('/<+/', '<', (string) $value);
+
+        return (string) $value;
     }
 
     private function debugLog($message)

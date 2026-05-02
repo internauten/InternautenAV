@@ -103,15 +103,17 @@ if ($action === 'get_mrz_form') {
     // Lade TPL
     $context->smarty->assign([
         'internautenav_carrier_id' => $carrierId,
-        'internautenav_intro' => $module->l('payment_intro'),
-        'internautenav_doc_label' => $module->l('form_doc_label'),
-        'internautenav_doc_ch_id' => $module->l('form_doc_ch_id'),
-        'internautenav_doc_ch_pass' => $module->l('form_doc_ch_pass'),
-        'internautenav_doc_eu_pass' => $module->l('form_doc_eu_pass'),
-        'internautenav_line1_label' => $module->l('form_line1_label'),
-        'internautenav_line2_label' => $module->l('form_line2_label'),
-        'internautenav_line3_label' => $module->l('form_line3_label'),
-        'internautenav_hint' => $module->l('modal_hint'),
+        'internautenav_line3_prefill' => $module->getDeliveryAddressMrzLine3Prefill(),
+        'internautenav_pass_line1_prefill' => $module->getDeliveryAddressSwissPassLine1Prefill(),
+        'internautenav_intro' => $module->l('payment_intro', 'ajax'),
+        'internautenav_doc_label' => $module->l('form_doc_label', 'ajax'),
+        'internautenav_doc_ch_id' => $module->l('form_doc_ch_id', 'ajax'),
+        'internautenav_doc_ch_pass' => $module->l('form_doc_ch_pass', 'ajax'),
+        'internautenav_doc_eu_pass' => $module->l('form_doc_eu_pass', 'ajax'),
+        'internautenav_line1_label' => $module->l('form_line1_label', 'ajax'),
+        'internautenav_line2_label' => $module->l('form_line2_label', 'ajax'),
+        'internautenav_line3_label' => $module->l('form_line3_label', 'ajax'),
+        'internautenav_hint' => $module->l('modal_hint', 'ajax'),
     ]);
 
     header('Content-Type: text/html; charset=utf-8');

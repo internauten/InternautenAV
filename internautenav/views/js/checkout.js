@@ -25,40 +25,38 @@ document.addEventListener('DOMContentLoaded', function () {
         return gate.querySelector('.js-internautenav-doc-type');
     }
 
-    function getLineFields(gate) {
-        return {
-            line1: gate.querySelector('input[name="internautenav_modal_line1"]'),
-            line2: gate.querySelector('input[name="internautenav_modal_line2"]'),
-            line3: gate.querySelector('input[name="internautenav_modal_line3"]'),
-            line3Group: gate.querySelector('.js-internautenav-line3-group')
-        };
-    }
-
     function getErrorNode(gate) {
         return gate.querySelector('.js-internautenav-error');
     }
 
+    function applyDocTypeBlocks(container, docType) {
+        var blocks = container.querySelectorAll('.js-internautenav-doc-fields');
+        blocks.forEach(function (block) {
+            var isActive = block.getAttribute('data-doc-type') === docType;
+            block.hidden = !isActive;
+            var inputs = block.querySelectorAll('input');
+            inputs.forEach(function (input) {
+                input.required = isActive;
+                if (!isActive) {
+                    input.value = '';
+                }
+            });
+            if (isActive) {
+                inputs.forEach(function (input) {
+                    if (!input.value && input.dataset && input.dataset.prefill) {
+                        input.value = input.dataset.prefill;
+                    }
+                });
+            }
+        });
+    }
+
     function setLineRules(gate) {
         var select = getDocTypeSelect(gate);
-        var fields = getLineFields(gate);
-        if (!select || !fields.line1 || !fields.line2 || !fields.line3 || !fields.line3Group) {
+        if (!select) {
             return;
         }
-
-        if (select.value === 'ch_id') {
-            fields.line1.maxLength = 30;
-            fields.line2.maxLength = 30;
-            fields.line3.maxLength = 30;
-            fields.line3.required = true;
-            fields.line3Group.style.display = '';
-            return;
-        }
-
-        fields.line1.maxLength = 44;
-        fields.line2.maxLength = 44;
-        fields.line3.required = false;
-        fields.line3.value = '';
-        fields.line3Group.style.display = 'none';
+        applyDocTypeBlocks(gate, select.value);
     }
 
     function openModal(gate) {
@@ -120,14 +118,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function collectPayload(gate) {
         var select = getDocTypeSelect(gate);
-        var fields = getLineFields(gate);
+        var docType = select ? select.value : '';
+        var activeBlock = docType ? gate.querySelector('.js-internautenav-doc-fields[data-doc-type="' + docType + '"]') : null;
+
+        function getLineValue(suffix) {
+            if (!activeBlock) {
+                return '';
+            }
+            var input = activeBlock.querySelector('input[name*="' + suffix + '"]');
+            return input ? input.value : '';
+        }
 
         return {
             carrierId: gate.getAttribute('data-carrier-id') || '',
-            docType: select ? select.value : '',
-            line1: fields.line1 ? fields.line1.value : '',
-            line2: fields.line2 ? fields.line2.value : '',
-            line3: fields.line3 ? fields.line3.value : ''
+            docType: docType,
+            line1: getLineValue('line1'),
+            line2: getLineValue('line2'),
+            line3: getLineValue('line3')
         };
     }
 
@@ -271,7 +278,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            if (event.target.matches('input[name^="internautenav_modal_line"]')) {
+            if (event.target.closest('.js-internautenav-doc-fields')) {
                 clearError(gate);
             }
         });
@@ -320,6 +327,15 @@ document.addEventListener('DOMContentLoaded', function () {
         getAllGates().forEach(function (gate) {
             bindGate(gate);
         });
+        document.querySelectorAll('.internautenav-mrz-box').forEach(function (box) {
+            if (box.closest(GATE_SELECTOR)) {
+                return;
+            }
+            var select = box.querySelector('.js-internautenav-doc-type');
+            if (select) {
+                applyDocTypeBlocks(box, select.value);
+            }
+        });
     }
 
     document.addEventListener('keydown', function (event) {
@@ -334,6 +350,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.addEventListener('updatedDeliveryForm', refreshGates);
     document.addEventListener('updatedCart', refreshGates);
+
+    document.addEventListener('change', function (event) {
+        if (!event.target.matches('.js-internautenav-doc-type')) {
+            return;
+        }
+        if (event.target.closest(GATE_SELECTOR)) {
+            return;
+        }
+        var box = event.target.closest('.internautenav-mrz-box');
+        if (box) {
+            applyDocTypeBlocks(box, event.target.value);
+        }
+    });
 
     refreshGates();
 });
