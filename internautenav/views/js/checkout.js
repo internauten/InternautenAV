@@ -116,10 +116,52 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function mrzCharValue(ch) {
+        var code = ch.toUpperCase().charCodeAt(0);
+        if (code >= 48 && code <= 57) { return code - 48; }       // 0-9
+        if (code >= 65 && code <= 90) { return code - 55; }       // A-Z => 10-35
+        return 0;                                                   // '<' and others
+    }
+
+    function computeMrzCheckDigit(str) {
+        var weights = [7, 3, 1];
+        var sum = 0;
+        for (var i = 0; i < str.length; i++) {
+            sum += mrzCharValue(str[i]) * weights[i % 3];
+        }
+        return sum % 10;
+    }
+
+    function validateChIdCheckDigit(gate) {
+        var block = gate.querySelector('.js-internautenav-doc-fields[data-doc-type="ch_id"]');
+        if (!block) { return true; }
+        var numberInput = block.querySelector('input[data-chid-number="1"]');
+        var checkInput = block.querySelector('input[data-chid-check="1"]');
+        if (!numberInput || !checkInput) { return true; }
+
+        // Document number field in the MRZ is 9 characters (8 entered + '<' filler)
+        var docField = numberInput.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase().padEnd(9, '<').slice(0, 9);
+        var expected = computeMrzCheckDigit(docField);
+        var entered = parseInt(checkInput.value, 10);
+        return expected === entered;
+    }
+
     function collectPayload(gate) {
         var select = getDocTypeSelect(gate);
         var docType = select ? select.value : '';
         var activeBlock = docType ? gate.querySelector('.js-internautenav-doc-fields[data-doc-type="' + docType + '"]') : null;
+
+        function buildChIdLine1() {
+            if (!activeBlock) {
+                return '';
+            }
+            var numberInput = activeBlock.querySelector('input[data-chid-number="1"]');
+            var checkInput = activeBlock.querySelector('input[data-chid-check="1"]');
+            var docNumber = numberInput ? numberInput.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase() : '';
+            var checkDigit = checkInput ? checkInput.value.replace(/[^0-9]/g, '') : '';
+            var rawLine = 'IDCHE' + docNumber + '<' + checkDigit;
+            return rawLine.padEnd(30, '<').slice(0, 30);
+        }
 
         function getLineValue(suffix) {
             if (!activeBlock) {
@@ -132,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return {
             carrierId: gate.getAttribute('data-carrier-id') || '',
             docType: docType,
-            line1: getLineValue('line1'),
+            line1: docType === 'ch_id' ? buildChIdLine1() : getLineValue('line1'),
             line2: getLineValue('line2'),
             line3: getLineValue('line3')
         };
@@ -206,6 +248,24 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         var payload = collectPayload(gate);
+
+        if (payload.docType === 'ch_id') {
+            var chIdCheckErrorNode = gate.querySelector('.js-internautenav-chid-check-error');
+            if (!validateChIdCheckDigit(gate)) {
+                if (chIdCheckErrorNode) {
+                    chIdCheckErrorNode.hidden = false;
+                    chIdCheckErrorNode.textContent = 'Die Prüfziffer stimmt nicht mit der Ausweisnummer überein.';
+                } else {
+                    showError(gate, 'Die Prüfziffer stimmt nicht mit der Ausweisnummer überein.');
+                }
+                return;
+            }
+            if (chIdCheckErrorNode) {
+                chIdCheckErrorNode.hidden = true;
+                chIdCheckErrorNode.textContent = '';
+            }
+        }
+
         var baseUrl = (typeof internautenav_ajax_url !== 'undefined' && internautenav_ajax_url) ? internautenav_ajax_url : '/modules/internautenav/ajax.php';
         var body = new URLSearchParams();
 

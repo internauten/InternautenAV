@@ -17,15 +17,36 @@
 
   <div class="js-internautenav-doc-fields" data-doc-type="ch_id" hidden>
     <div class="form-group internautenav-group">
-      <label for="internautenav_ch_id_line1_{$internautenav_carrier_id|intval}">{$internautenav_line1_label|escape:'htmlall':'UTF-8'}</label>
-      <input
-        id="internautenav_ch_id_line1_{$internautenav_carrier_id|intval}"
-        class="form-control"
-        type="text"
-        name="internautenav_mrz_line1[{$internautenav_carrier_id|intval}]"
-        autocomplete="off"
-        maxlength="30"
-      >
+      <label for="internautenav_ch_id_line1_number_{$internautenav_carrier_id|intval}">{$internautenav_line1_label|escape:'htmlall':'UTF-8'}</label>
+      <div class="internautenav-mrz-line1-row">
+        <span class="internautenav-mrz-fixed">IDCHE</span>
+        <input
+          id="internautenav_ch_id_line1_number_{$internautenav_carrier_id|intval}"
+          class="form-control internautenav-mrz-input-number"
+          type="text"
+          name="internautenav_mrz_ch_id_line1_number[{$internautenav_carrier_id|intval}]"
+          inputmode="text"
+          pattern="[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9]"
+          minlength="8"
+          maxlength="8"
+          data-chid-number="1"
+          autocomplete="off"
+        >
+        <span class="internautenav-mrz-fixed">&lt;</span>
+        <input
+          id="internautenav_ch_id_line1_check_{$internautenav_carrier_id|intval}"
+          class="form-control internautenav-mrz-input-check"
+          type="text"
+          name="internautenav_mrz_ch_id_line1_check[{$internautenav_carrier_id|intval}]"
+          inputmode="numeric"
+          pattern="[0-9]"
+          minlength="1"
+          maxlength="1"
+          data-chid-check="1"
+          autocomplete="off"
+        >
+      </div>
+      <p class="internautenav-chid-check-error js-internautenav-chid-check-error" hidden></p>
     </div>
     <div class="form-group internautenav-group">
       <label for="internautenav_ch_id_line2_{$internautenav_carrier_id|intval}">{$internautenav_line2_label|escape:'htmlall':'UTF-8'}</label>
