@@ -94,7 +94,8 @@
   margin-bottom: 10px;
 }
 
-.internautenav-chid-check-error {
+.internautenav-chid-check-error,
+.internautenav-chid-line2-error {
   margin: 4px 0 0;
   font-size: 12px;
   color: #b42318;
@@ -116,6 +117,7 @@
 }
 
 .internautenav-mrz-input-number,
+.internautenav-mrz-input-date,
 .internautenav-mrz-input-check {
   font-family: 'Courier New', Courier, monospace;
   text-transform: uppercase;
@@ -127,6 +129,11 @@
 .internautenav-mrz-input-number {
   width: 10ch;
   min-width: 10ch;
+}
+
+.internautenav-mrz-input-date {
+  width: 9ch;
+  min-width: 9ch;
 }
 
 .internautenav-mrz-input-check {

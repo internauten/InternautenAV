@@ -41,9 +41,9 @@ $_MODULE['<{internautenav}prestashop>internautenav_c691329cd3e16f8d829813b5feb2b
 $_MODULE['<{internautenav}prestashop>internautenav_a1f8eac04d0be0521423b13bd3e78b16'] = 'Vérifier maintenant';
 $_MODULE['<{internautenav}prestashop>internautenav_4086ac267cc51dcffd8581677232ee9c'] = 'Veuillez saisir les lignes exactement comme dans le document, y compris <.';
 $_MODULE['<{internautenav}prestashop>internautenav_287406fe9a6e57317fc5a5795e6f2900'] = 'Type de document';
-$_MODULE['<{internautenav}prestashop>internautenav_12309f0fc1ad868231073aef2aa31ab9'] = 'Carte d\'identité suisse (3 lignes)';
-$_MODULE['<{internautenav}prestashop>internautenav_083559e45e69f446341bde604c601818'] = 'Passeport suisse (2 lignes)';
-$_MODULE['<{internautenav}prestashop>internautenav_bb60cfb540fd0525cf15dfe0afd27505'] = 'Passeport UE (2 lignes)';
+$_MODULE['<{internautenav}prestashop>internautenav_12309f0fc1ad868231073aef2aa31ab9'] = 'Carte d\'identité suisse';
+$_MODULE['<{internautenav}prestashop>internautenav_083559e45e69f446341bde604c601818'] = 'Passeport suisse';
+$_MODULE['<{internautenav}prestashop>internautenav_bb60cfb540fd0525cf15dfe0afd27505'] = 'Autres documents';
 $_MODULE['<{internautenav}prestashop>internautenav_c8afc51d042bea02c016d50f701cf52f'] = 'Ligne MRZ 1';
 $_MODULE['<{internautenav}prestashop>internautenav_ba42beea11a66e21bc73f4b953e82548'] = 'Ligne MRZ 2';
 $_MODULE['<{internautenav}prestashop>internautenav_3295794b75985b99452e318bbbb12036'] = 'Ligne MRZ 3 (carte d\'identité suisse uniquement)';
@@ -64,9 +64,9 @@ $_MODULE['<{internautenav}prestashop>internautenav_92f8f8106ab0a1fc895786924d69a
 
 $_MODULE['<{internautenav}prestashop>ajax_1e8c192b93b08e816a1b9df13a66b5a0'] = 'Pour le mode de livraison sélectionné, une vérification d\'âge et d\'identité par MRZ est requise avant le paiement.';
 $_MODULE['<{internautenav}prestashop>ajax_287406fe9a6e57317fc5a5795e6f2900'] = 'Type de document';
-$_MODULE['<{internautenav}prestashop>ajax_12309f0fc1ad868231073aef2aa31ab9'] = 'Carte d\'identité suisse (3 lignes)';
-$_MODULE['<{internautenav}prestashop>ajax_083559e45e69f446341bde604c601818'] = 'Passeport suisse (2 lignes)';
-$_MODULE['<{internautenav}prestashop>ajax_bb60cfb540fd0525cf15dfe0afd27505'] = 'Passeport UE (2 lignes)';
+$_MODULE['<{internautenav}prestashop>ajax_12309f0fc1ad868231073aef2aa31ab9'] = 'Carte d\'identité suisse';
+$_MODULE['<{internautenav}prestashop>ajax_083559e45e69f446341bde604c601818'] = 'Passeport suisse';
+$_MODULE['<{internautenav}prestashop>ajax_bb60cfb540fd0525cf15dfe0afd27505'] = 'Autres documents';
 $_MODULE['<{internautenav}prestashop>ajax_c8afc51d042bea02c016d50f701cf52f'] = 'Ligne MRZ 1';
 $_MODULE['<{internautenav}prestashop>ajax_ba42beea11a66e21bc73f4b953e82548'] = 'Ligne MRZ 2';
 $_MODULE['<{internautenav}prestashop>ajax_3295794b75985b99452e318bbbb12036'] = 'Ligne MRZ 3 (carte d\'identité suisse uniquement)';

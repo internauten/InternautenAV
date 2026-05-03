@@ -105,6 +105,7 @@ if ($action === 'get_mrz_form') {
         'internautenav_carrier_id' => $carrierId,
         'internautenav_line3_prefill' => $module->getDeliveryAddressMrzLine3Prefill(),
         'internautenav_pass_line1_prefill' => $module->getDeliveryAddressSwissPassLine1Prefill(),
+        'internautenav_customer_sex' => $module->getCustomerMrzSex(),
         'internautenav_intro' => $module->l('payment_intro', 'ajax'),
         'internautenav_doc_label' => $module->l('form_doc_label', 'ajax'),
         'internautenav_doc_ch_id' => $module->l('form_doc_ch_id', 'ajax'),

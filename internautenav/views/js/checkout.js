@@ -96,12 +96,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function clearError(gate) {
         var errorNode = getErrorNode(gate);
-        if (!errorNode) {
-            return;
+        if (errorNode) {
+            errorNode.hidden = true;
+            errorNode.textContent = '';
         }
 
-        errorNode.hidden = true;
-        errorNode.textContent = '';
+        gate.querySelectorAll('.js-internautenav-chid-check-error, .js-internautenav-chid-line2-error').forEach(function (el) {
+            el.hidden = true;
+            el.textContent = '';
+        });
     }
 
     function setBusy(gate, isBusy) {
@@ -146,6 +149,48 @@ document.addEventListener('DOMContentLoaded', function () {
         return expected === entered;
     }
 
+    function validateChIdLine2(gate) {
+        var block = gate.querySelector('.js-internautenav-doc-fields[data-doc-type="ch_id"]');
+        if (!block) { return null; }
+        var birth7Input = block.querySelector('input[data-chid-birth7="1"]');
+        var expiry7Input = block.querySelector('input[data-chid-expiry7="1"]');
+        var compositeInput = block.querySelector('input[data-chid-composite="1"]');
+        var numberInput = block.querySelector('input[data-chid-number="1"]');
+        var line1CheckInput = block.querySelector('input[data-chid-check="1"]');
+        if (!birth7Input || !expiry7Input || !compositeInput) { return null; }
+
+        var birth7 = birth7Input.value;
+        var expiry7 = expiry7Input.value;
+
+        if (birth7.length === 7) {
+            var expectedBirth = computeMrzCheckDigit(birth7.slice(0, 6));
+            if (expectedBirth !== parseInt(birth7.slice(6), 10)) {
+                return 'Die Prüfziffer des Geburtsdatums stimmt nicht.';
+            }
+        }
+
+        if (expiry7.length === 7) {
+            var expectedExpiry = computeMrzCheckDigit(expiry7.slice(0, 6));
+            if (expectedExpiry !== parseInt(expiry7.slice(6), 10)) {
+                return 'Die Prüfziffer des Ablaufdatums stimmt nicht.';
+            }
+        }
+
+        // Composite check: covers line1[5-29] + line2[0-6] + line2[8-14]
+        // = docNum(9) + docCheck(1) + optionalData1(15) + birth7(7) + expiry7(7) = 39 chars
+        var docNum = numberInput ? numberInput.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase().padEnd(9, '<').slice(0, 9) : '<<<<<<<<<<';
+        var docCheck = line1CheckInput ? line1CheckInput.value.replace(/[^0-9]/g, '') || '0' : '0';
+        var optional1 = '<<<<<<<<<<<<<<<'; // 15 chars optional data line1
+        var compositeStr = docNum + docCheck + optional1 + birth7 + expiry7;
+        var expectedComposite = computeMrzCheckDigit(compositeStr);
+        var enteredComposite = parseInt(compositeInput.value, 10);
+        if (expectedComposite !== enteredComposite) {
+            return 'Die Gesamtprüfziffer stimmt nicht.';
+        }
+
+        return null;
+    }
+
     function collectPayload(gate) {
         var select = getDocTypeSelect(gate);
         var docType = select ? select.value : '';
@@ -163,6 +208,35 @@ document.addEventListener('DOMContentLoaded', function () {
             return rawLine.padEnd(30, '<').slice(0, 30);
         }
 
+        function buildChIdLine2() {
+            if (!activeBlock) {
+                return '';
+            }
+            var birth7Input = activeBlock.querySelector('input[data-chid-birth7="1"]');
+            var sexSpan = activeBlock.querySelector('[data-chid-sex]');
+            var expiry7Input = activeBlock.querySelector('input[data-chid-expiry7="1"]');
+            var compositeInput = activeBlock.querySelector('input[data-chid-composite="1"]');
+
+            var birth7 = birth7Input ? birth7Input.value.padEnd(7, '<').slice(0, 7) : '<<<<<<<';
+            var sex = sexSpan ? (sexSpan.getAttribute('data-chid-sex') || '<') : '<';
+            var expiry7 = expiry7Input ? expiry7Input.value.padEnd(7, '<').slice(0, 7) : '<<<<<<<';
+            var composite = compositeInput ? compositeInput.value.replace(/[^0-9]/g, '') : '<';
+
+            // TD1 line 2: birth7(7) + sex(1) + expiry7(7) + CHE(3) + 11*<(11) + composite(1) = 30
+            return (birth7 + sex + expiry7 + 'CHE<<<<<<<<<<<' + composite).padEnd(30, '<').slice(0, 30);
+        }
+
+        function buildChIdLine3() {
+            if (!activeBlock) {
+                return '';
+            }
+            var line3Node = activeBlock.querySelector('.js-internautenav-chid-line3-text');
+            if (!line3Node) {
+                return '';
+            }
+            return (line3Node.getAttribute('data-line3') || line3Node.textContent || '').trim();
+        }
+
         function getLineValue(suffix) {
             if (!activeBlock) {
                 return '';
@@ -175,8 +249,8 @@ document.addEventListener('DOMContentLoaded', function () {
             carrierId: gate.getAttribute('data-carrier-id') || '',
             docType: docType,
             line1: docType === 'ch_id' ? buildChIdLine1() : getLineValue('line1'),
-            line2: getLineValue('line2'),
-            line3: getLineValue('line3')
+            line2: docType === 'ch_id' ? buildChIdLine2() : getLineValue('line2'),
+            line3: docType === 'ch_id' ? buildChIdLine3() : getLineValue('line3')
         };
     }
 
@@ -263,6 +337,22 @@ document.addEventListener('DOMContentLoaded', function () {
             if (chIdCheckErrorNode) {
                 chIdCheckErrorNode.hidden = true;
                 chIdCheckErrorNode.textContent = '';
+            }
+
+            var chIdLine2ErrorNode = gate.querySelector('.js-internautenav-chid-line2-error');
+            var line2Error = validateChIdLine2(gate);
+            if (line2Error) {
+                if (chIdLine2ErrorNode) {
+                    chIdLine2ErrorNode.hidden = false;
+                    chIdLine2ErrorNode.textContent = line2Error;
+                } else {
+                    showError(gate, line2Error);
+                }
+                return;
+            }
+            if (chIdLine2ErrorNode) {
+                chIdLine2ErrorNode.hidden = true;
+                chIdLine2ErrorNode.textContent = '';
             }
         }
 

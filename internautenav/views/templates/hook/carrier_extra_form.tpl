@@ -17,7 +17,6 @@
 
   <div class="js-internautenav-doc-fields" data-doc-type="ch_id" hidden>
     <div class="form-group internautenav-group">
-      <label for="internautenav_ch_id_line1_number_{$internautenav_carrier_id|intval}">{$internautenav_line1_label|escape:'htmlall':'UTF-8'}</label>
       <div class="internautenav-mrz-line1-row">
         <span class="internautenav-mrz-fixed">IDCHE</span>
         <input
@@ -49,27 +48,54 @@
       <p class="internautenav-chid-check-error js-internautenav-chid-check-error" hidden></p>
     </div>
     <div class="form-group internautenav-group">
-      <label for="internautenav_ch_id_line2_{$internautenav_carrier_id|intval}">{$internautenav_line2_label|escape:'htmlall':'UTF-8'}</label>
-      <input
-        id="internautenav_ch_id_line2_{$internautenav_carrier_id|intval}"
-        class="form-control"
-        type="text"
-        name="internautenav_mrz_line2[{$internautenav_carrier_id|intval}]"
-        autocomplete="off"
-        maxlength="30"
-      >
+      <div class="internautenav-mrz-line1-row">
+        <input
+          id="internautenav_ch_id_birth7_{$internautenav_carrier_id|intval}"
+          class="form-control internautenav-mrz-input-date"
+          type="text"
+          name="internautenav_mrz_ch_id_birth7[{$internautenav_carrier_id|intval}]"
+          inputmode="numeric"
+          pattern="[0-9][0-9][0-9][0-9][0-9][0-9][0-9]"
+          minlength="7"
+          maxlength="7"
+          data-chid-birth7="1"
+          autocomplete="off"
+          placeholder="YYMMDDP"
+        >
+        <span class="internautenav-mrz-fixed" data-chid-sex="{$internautenav_customer_sex|escape:'htmlall':'UTF-8'}">{$internautenav_customer_sex|escape:'htmlall':'UTF-8'}</span>
+        <input
+          id="internautenav_ch_id_expiry7_{$internautenav_carrier_id|intval}"
+          class="form-control internautenav-mrz-input-date"
+          type="text"
+          name="internautenav_mrz_ch_id_expiry7[{$internautenav_carrier_id|intval}]"
+          inputmode="numeric"
+          pattern="[0-9][0-9][0-9][0-9][0-9][0-9][0-9]"
+          minlength="7"
+          maxlength="7"
+          data-chid-expiry7="1"
+          autocomplete="off"
+          placeholder="YYMMDDP"
+        >
+        <span class="internautenav-mrz-fixed">CHE&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</span>
+        <input
+          id="internautenav_ch_id_composite_{$internautenav_carrier_id|intval}"
+          class="form-control internautenav-mrz-input-check"
+          type="text"
+          name="internautenav_mrz_ch_id_composite[{$internautenav_carrier_id|intval}]"
+          inputmode="numeric"
+          pattern="[0-9]"
+          minlength="1"
+          maxlength="1"
+          data-chid-composite="1"
+          autocomplete="off"
+        >
+      </div>
+      <p class="internautenav-chid-line2-error js-internautenav-chid-line2-error" hidden></p>
     </div>
     <div class="form-group internautenav-group">
-      <label for="internautenav_ch_id_line3_{$internautenav_carrier_id|intval}">{$internautenav_line3_label|escape:'htmlall':'UTF-8'}</label>
-      <input
-        id="internautenav_ch_id_line3_{$internautenav_carrier_id|intval}"
-        class="form-control"
-        type="text"
-        name="internautenav_mrz_line3[{$internautenav_carrier_id|intval}]"
-        autocomplete="off"
-        maxlength="30"
-        data-prefill="{$internautenav_line3_prefill|default:''|escape:'htmlall':'UTF-8'}"
-      >
+      <div class="internautenav-mrz-fixed js-internautenav-chid-line3-text" data-line3="{$internautenav_line3_prefill|default:''|escape:'htmlall':'UTF-8'}">
+        {$internautenav_line3_prefill|default:''|escape:'htmlall':'UTF-8'}
+      </div>
     </div>
   </div>
 

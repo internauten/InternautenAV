@@ -303,6 +303,7 @@ class Internautenav extends Module
             'internautenav_is_verified' => $isVerified,
             'internautenav_line3_prefill' => $this->getDeliveryAddressMrzLine3Prefill(),
             'internautenav_pass_line1_prefill' => $this->getDeliveryAddressSwissPassLine1Prefill(),
+            'internautenav_customer_sex' => $this->getCustomerMrzSex(),
             'internautenav_payment_title' => $this->l('payment_title'),
             'internautenav_payment_intro' => $this->l('payment_intro'),
             'internautenav_payment_link' => $this->l('payment_link'),
@@ -345,6 +346,7 @@ class Internautenav extends Module
             'internautenav_carrier_id' => $carrierId,
             'internautenav_line3_prefill' => $this->getDeliveryAddressMrzLine3Prefill(),
             'internautenav_pass_line1_prefill' => $this->getDeliveryAddressSwissPassLine1Prefill(),
+            'internautenav_customer_sex' => $this->getCustomerMrzSex(),
             'internautenav_intro' => $this->l('payment_intro'),
             'internautenav_doc_label' => $this->l('form_doc_label'),
             'internautenav_doc_ch_id' => $this->l('form_doc_ch_id'),
@@ -470,6 +472,52 @@ class Internautenav extends Module
         $nameField = str_pad($nameField, $nameBudget, '<');
 
         return $prefix . $nameField;
+    }
+
+    public function getCustomerMrzSex()
+    {
+        $context = Context::getContext();
+        if (!$context) {
+            return '<';
+        }
+
+        $customer = null;
+        if (isset($context->customer) && Validate::isLoadedObject($context->customer)) {
+            $customer = $context->customer;
+        } elseif (isset($context->cart) && Validate::isLoadedObject($context->cart) && (int) $context->cart->id_customer > 0) {
+            $cartCustomer = new Customer((int) $context->cart->id_customer);
+            if (Validate::isLoadedObject($cartCustomer)) {
+                $customer = $cartCustomer;
+            }
+        }
+
+        if (!$customer) {
+            return '<';
+        }
+
+        $idGender = (int) $customer->id_gender;
+        if ($idGender === 1) {
+            return 'M';
+        }
+        if ($idGender === 2) {
+            return 'F';
+        }
+
+        if ($idGender > 0) {
+            $idLang = isset($context->language) ? (int) $context->language->id : null;
+            $gender = new Gender($idGender, $idLang);
+            if (Validate::isLoadedObject($gender)) {
+                $name = Tools::strtolower((string) $gender->name);
+                if (preg_match('/frau|mrs|ms|madam|madame|fem|woman|donna|femme/', $name)) {
+                    return 'F';
+                }
+                if (preg_match('/herr|mr|sir|male|man|uomo|homme/', $name)) {
+                    return 'M';
+                }
+            }
+        }
+
+        return '<';
     }
 
     private function normalizeMrzNamePart($value)
