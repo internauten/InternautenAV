@@ -47,6 +47,7 @@ $_MODULE['<{internautenav}prestashop>internautenav_bb60cfb540fd0525cf15dfe0afd27
 $_MODULE['<{internautenav}prestashop>internautenav_c8afc51d042bea02c016d50f701cf52f'] = 'Ligne MRZ 1';
 $_MODULE['<{internautenav}prestashop>internautenav_ba42beea11a66e21bc73f4b953e82548'] = 'Ligne MRZ 2';
 $_MODULE['<{internautenav}prestashop>internautenav_3295794b75985b99452e318bbbb12036'] = 'Ligne MRZ 3 (carte d\'identité suisse uniquement)';
+$_MODULE['<{internautenav}prestashop>internautenav_f57f1c760872c0bd4ce7a17f73b8fd8e'] = 'Comme le verso de la carte d\'identité suisse';
 $_MODULE['<{internautenav}prestashop>internautenav_bb44afc81b90a205c5864f98a960b904'] = 'Transporteur invalide.';
 $_MODULE['<{internautenav}prestashop>internautenav_78150523e5650cb6f3ea03b1dd73775c'] = 'Transporteur non trouvé.';
 $_MODULE['<{internautenav}prestashop>internautenav_c5a14f3a639b8c02437f66ee647370a2'] = 'MRZ invalide.';

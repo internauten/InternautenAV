@@ -55,7 +55,7 @@
 
         <div class="js-internautenav-doc-fields" data-doc-type="ch_id" hidden>
           <div class="internautenav-chid-fields-header">
-            <h3>Wie Rückseite der Schweizer ID</h3>
+            <h3>{$internautenav_chid_fields_header|escape:'htmlall':'UTF-8'}</h3>
           </div>
           <div class="form-group internautenav-group">
             <div class="internautenav-mrz-line1-row">

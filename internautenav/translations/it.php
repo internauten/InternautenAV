@@ -47,6 +47,7 @@ $_MODULE['<{internautenav}prestashop>internautenav_bb60cfb540fd0525cf15dfe0afd27
 $_MODULE['<{internautenav}prestashop>internautenav_c8afc51d042bea02c016d50f701cf52f'] = 'Riga MRZ 1';
 $_MODULE['<{internautenav}prestashop>internautenav_ba42beea11a66e21bc73f4b953e82548'] = 'Riga MRZ 2';
 $_MODULE['<{internautenav}prestashop>internautenav_3295794b75985b99452e318bbbb12036'] = 'Riga MRZ 3 (solo carta d\'identità svizzera)';
+$_MODULE['<{internautenav}prestashop>internautenav_f57f1c760872c0bd4ce7a17f73b8fd8e'] = 'Come il retro della carta d\'identità svizzera';
 $_MODULE['<{internautenav}prestashop>internautenav_bb44afc81b90a205c5864f98a960b904'] = 'Corriere non valido.';
 $_MODULE['<{internautenav}prestashop>internautenav_78150523e5650cb6f3ea03b1dd73775c'] = 'Corriere non trovato.';
 $_MODULE['<{internautenav}prestashop>internautenav_c5a14f3a639b8c02437f66ee647370a2'] = 'MRZ non valido.';

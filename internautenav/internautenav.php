@@ -298,6 +298,7 @@ class Internautenav extends Module
             'internautenav_doc_ch_id' => $this->l('form_doc_ch_id'),
             'internautenav_doc_ch_pass' => $this->l('form_doc_ch_pass'),
             'internautenav_doc_eu_pass' => $this->l('form_doc_eu_pass'),
+            'internautenav_chid_fields_header' => $this->l('chid_fields_header'),
             'internautenav_line1_label' => $this->l('form_line1_label'),
             'internautenav_line2_label' => $this->l('form_line2_label'),
             'internautenav_line3_label' => $this->l('form_line3_label'),

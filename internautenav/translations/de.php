@@ -39,7 +39,7 @@ $_MODULE['<{internautenav}prestashop>internautenav_45c6662501837c3083030260413f3
 $_MODULE['<{internautenav}prestashop>internautenav_448d315158bc82c3f64ceb007056fd0b'] = 'MRZ-Daten eingeben';
 $_MODULE['<{internautenav}prestashop>internautenav_c691329cd3e16f8d829813b5feb2b451'] = 'Schliessen';
 $_MODULE['<{internautenav}prestashop>internautenav_a1f8eac04d0be0521423b13bd3e78b16'] = 'Jetzt pruefen';
-$_MODULE['<{internautenav}prestashop>internautenav_4086ac267cc51dcffd8581677232ee9c'] = 'Bitte Zeilen exakt wie im Dokument inklusive < eingeben.';
+$_MODULE['<{internautenav}prestashop>internautenav_4086ac267cc51dcffd8581677232ee9c'] = 'Bitte Zeilen exakt wie im Dokument eingeben.';
 $_MODULE['<{internautenav}prestashop>internautenav_287406fe9a6e57317fc5a5795e6f2900'] = 'Dokumenttyp';
 $_MODULE['<{internautenav}prestashop>internautenav_12309f0fc1ad868231073aef2aa31ab9'] = 'Schweizer ID';
 $_MODULE['<{internautenav}prestashop>internautenav_083559e45e69f446341bde604c601818'] = 'Schweizer Pass';
@@ -47,6 +47,7 @@ $_MODULE['<{internautenav}prestashop>internautenav_bb60cfb540fd0525cf15dfe0afd27
 $_MODULE['<{internautenav}prestashop>internautenav_c8afc51d042bea02c016d50f701cf52f'] = 'MRZ Zeile 1';
 $_MODULE['<{internautenav}prestashop>internautenav_ba42beea11a66e21bc73f4b953e82548'] = 'MRZ Zeile 2';
 $_MODULE['<{internautenav}prestashop>internautenav_3295794b75985b99452e318bbbb12036'] = 'MRZ Zeile 3 (nur CH ID)';
+$_MODULE['<{internautenav}prestashop>internautenav_f57f1c760872c0bd4ce7a17f73b8fd8e'] = 'Wie Rückseite der Schweizer ID';
 $_MODULE['<{internautenav}prestashop>internautenav_bb44afc81b90a205c5864f98a960b904'] = 'Ungueltiger Carrier.';
 $_MODULE['<{internautenav}prestashop>internautenav_78150523e5650cb6f3ea03b1dd73775c'] = 'Carrier nicht gefunden.';
 $_MODULE['<{internautenav}prestashop>internautenav_c5a14f3a639b8c02437f66ee647370a2'] = 'MRZ ungueltig.';
