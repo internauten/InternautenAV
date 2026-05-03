@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Composite check: covers line1[5-29] + line2[0-6] + line2[8-14]
         // = docNum(9) + docCheck(1) + optionalData1(15) + birth7(7) + expiry7(7) = 39 chars
-        var docNum = numberInput ? numberInput.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase().padEnd(9, '<').slice(0, 9) : '<<<<<<<<<<';
+        var docNum = numberInput ? (numberInput.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase().padEnd(8, '<').slice(0, 8) + '<') : '<<<<<<<<<';
         var docCheck = line1CheckInput ? line1CheckInput.value.replace(/[^0-9]/g, '') || '0' : '0';
         var optional1 = '<<<<<<<<<<<<<<<'; // 15 chars optional data line1
         var compositeStr = docNum + docCheck + optional1 + birth7 + expiry7;

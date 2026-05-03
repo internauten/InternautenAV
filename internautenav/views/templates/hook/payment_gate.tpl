@@ -54,6 +54,9 @@
         </div>
 
         <div class="js-internautenav-doc-fields" data-doc-type="ch_id" hidden>
+          <div class="internautenav-chid-fields-header">
+            <h3>Wie Rückseite der Schweizer ID</h3>
+          </div>
           <div class="form-group internautenav-group">
             <div class="internautenav-mrz-line1-row">
               <span class="internautenav-mrz-fixed">IDCHE</span>
@@ -68,6 +71,7 @@
                 maxlength="8"
                 data-chid-number="1"
                 autocomplete="off"
+                placeholder="S1A00A00"
               >
               <span class="internautenav-mrz-fixed">&lt;</span>
               <input
@@ -82,6 +86,7 @@
                 data-chid-check="1"
                 autocomplete="off"
               >
+              <span class="internautenav-mrz-fixed">&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</span>
             </div>
             <p class="internautenav-chid-check-error js-internautenav-chid-check-error" hidden></p>
           </div>

@@ -69,59 +69,6 @@ if (!function_exists('internautenav_json_response')) {
     }
 }
 
-if ($action === 'get_mrz_form') {
-    $carrierId = (int)Tools::getValue('carrier_id', 0);
-    
-    if ($carrierId <= 0) {
-        http_response_code(400);
-        exit('Invalid carrier');
-    }
-
-    $carrier = new Carrier($carrierId);
-    if (!Validate::isLoadedObject($carrier)) {
-        http_response_code(404);
-        exit('Carrier not found');
-    }
-
-    $carrierReference = (int)$carrier->id_reference;
-    $requiredRefs = json_decode(Configuration::get('INTERNAUTENAV_REQUIRED_CARRIER_REFS'), true);
-    
-    if (!is_array($requiredRefs) || !in_array($carrierReference, $requiredRefs, true)) {
-        // Kein Formular erforderlich
-        exit('');
-    }
-
-    // Prüfe Verifikation
-    $context = Context::getContext();
-    if ($context->customer->isLogged() && $module->isCustomerVerified((int)$context->customer->id)) {
-        exit('');
-    }
-    if (!$context->customer->isLogged() && isset($_SESSION['internautenav_guest_verified']) && $_SESSION['internautenav_guest_verified']) {
-        exit('');
-    }
-
-    // Lade TPL
-    $context->smarty->assign([
-        'internautenav_carrier_id' => $carrierId,
-        'internautenav_line3_prefill' => $module->getDeliveryAddressMrzLine3Prefill(),
-        'internautenav_pass_line1_prefill' => $module->getDeliveryAddressSwissPassLine1Prefill(),
-        'internautenav_customer_sex' => $module->getCustomerMrzSex(),
-        'internautenav_intro' => $module->l('payment_intro', 'ajax'),
-        'internautenav_doc_label' => $module->l('form_doc_label', 'ajax'),
-        'internautenav_doc_ch_id' => $module->l('form_doc_ch_id', 'ajax'),
-        'internautenav_doc_ch_pass' => $module->l('form_doc_ch_pass', 'ajax'),
-        'internautenav_doc_eu_pass' => $module->l('form_doc_eu_pass', 'ajax'),
-        'internautenav_line1_label' => $module->l('form_line1_label', 'ajax'),
-        'internautenav_line2_label' => $module->l('form_line2_label', 'ajax'),
-        'internautenav_line3_label' => $module->l('form_line3_label', 'ajax'),
-        'internautenav_hint' => $module->l('modal_hint', 'ajax'),
-    ]);
-
-    header('Content-Type: text/html; charset=utf-8');
-    echo $module->fetch('module:internautenav/views/templates/hook/carrier_extra_form.tpl');
-    exit;
-}
-
 if ($action === 'validate_mrz') {
     $carrierId = (int) Tools::getValue('carrier_id', 0);
     $result = $module->validateMrzForCarrier($carrierId, [

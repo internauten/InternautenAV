@@ -70,4 +70,4 @@ $_MODULE['<{internautenav}prestashop>ajax_bb60cfb540fd0525cf15dfe0afd27505'] = '
 $_MODULE['<{internautenav}prestashop>ajax_c8afc51d042bea02c016d50f701cf52f'] = 'Ligne MRZ 1';
 $_MODULE['<{internautenav}prestashop>ajax_ba42beea11a66e21bc73f4b953e82548'] = 'Ligne MRZ 2';
 $_MODULE['<{internautenav}prestashop>ajax_3295794b75985b99452e318bbbb12036'] = 'Ligne MRZ 3 (carte d\'identité suisse uniquement)';
-$_MODULE['<{internautenav}prestashop>ajax_4086ac267cc51dcffd8581677232ee9c'] = 'Veuillez saisir les lignes exactement comme dans le document, y compris <.';
+$_MODULE['<{internautenav}prestashop>ajax_4086ac267cc51dcffd8581677232ee9c'] = 'Veuillez saisir les lignes exactement comme dans le document.';

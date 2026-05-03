@@ -41,9 +41,6 @@ class Internautenav extends Module
         return parent::install()
             && $this->registerHook('actionFrontControllerSetMedia')
             && $this->registerHook('displayPaymentTop')
-            && $this->registerHook('displayCarrierExtraContent')
-            && $this->registerHook('displayAfterCarrier')
-            && $this->registerHook('displayBeforeCarrier')
             && $this->registerHook('actionCarrierProcess')
             && $this->registerHook('actionValidateStepComplete')
             && $this->installDatabase()
@@ -272,21 +269,6 @@ class Internautenav extends Module
         );
     }
 
-    public function hookDisplayCarrierExtraContent($params)
-    {
-        return '';
-    }
-
-    public function hookDisplayAfterCarrier($params)
-    {
-        return '';
-    }
-
-    public function hookDisplayBeforeCarrier($params)
-    {
-        return '';
-    }
-
     public function hookDisplayPaymentTop($params)
     {
         $carrier = $this->getCurrentCheckoutCarrier();
@@ -323,45 +305,6 @@ class Internautenav extends Module
         ]);
 
         return $this->display(__FILE__, 'views/templates/hook/payment_gate.tpl');
-    }
-
-    private function renderMrzForm($carrierId, $carrierReference)
-    {
-        $carrierId = (int) $carrierId;
-        $carrierReference = (int) $carrierReference;
-
-        if ($carrierId <= 0 || $carrierReference <= 0) {
-            return '';
-        }
-
-        if (!$this->isCarrierReferenceRequired($carrierReference)) {
-            return '';
-        }
-
-        if ($this->isAlreadyVerifiedForCheckout()) {
-            return '';
-        }
-
-        $this->context->smarty->assign([
-            'internautenav_carrier_id' => $carrierId,
-            'internautenav_line3_prefill' => $this->getDeliveryAddressMrzLine3Prefill(),
-            'internautenav_pass_line1_prefill' => $this->getDeliveryAddressSwissPassLine1Prefill(),
-            'internautenav_customer_sex' => $this->getCustomerMrzSex(),
-            'internautenav_intro' => $this->l('payment_intro'),
-            'internautenav_doc_label' => $this->l('form_doc_label'),
-            'internautenav_doc_ch_id' => $this->l('form_doc_ch_id'),
-            'internautenav_doc_ch_pass' => $this->l('form_doc_ch_pass'),
-            'internautenav_doc_eu_pass' => $this->l('form_doc_eu_pass'),
-            'internautenav_line1_label' => $this->l('form_line1_label'),
-            'internautenav_line2_label' => $this->l('form_line2_label'),
-            'internautenav_line3_label' => $this->l('form_line3_label'),
-            'internautenav_hint' => $this->l('modal_hint'),
-        ]);
-
-        $output = $this->display(__FILE__, 'views/templates/hook/carrier_extra_form.tpl');
-        $this->debugLog('rendered carrier extra content length=' . Tools::strlen((string) $output));
-
-        return $output;
     }
 
     public function getDeliveryAddressMrzLine3Prefill()

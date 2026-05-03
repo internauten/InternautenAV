@@ -70,4 +70,4 @@ $_MODULE['<{internautenav}prestashop>ajax_bb60cfb540fd0525cf15dfe0afd27505'] = '
 $_MODULE['<{internautenav}prestashop>ajax_c8afc51d042bea02c016d50f701cf52f'] = 'MRZ Line 1';
 $_MODULE['<{internautenav}prestashop>ajax_ba42beea11a66e21bc73f4b953e82548'] = 'MRZ Line 2';
 $_MODULE['<{internautenav}prestashop>ajax_3295794b75985b99452e318bbbb12036'] = 'MRZ Line 3 (CH ID only)';
-$_MODULE['<{internautenav}prestashop>ajax_4086ac267cc51dcffd8581677232ee9c'] = 'Please enter lines exactly as in the document, including <.';
+$_MODULE['<{internautenav}prestashop>ajax_4086ac267cc51dcffd8581677232ee9c'] = 'Please enter lines exactly as in the document.';

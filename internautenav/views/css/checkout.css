@@ -110,7 +110,7 @@
 
 .internautenav-mrz-fixed {
   font-family: 'Courier New', Courier, monospace;
-  font-size: 14px;
+  font-size: 20px;
   letter-spacing: 0.06em;
   font-weight: 700;
   white-space: nowrap;
@@ -181,4 +181,17 @@ body.internautenav-modal-open {
   .internautenav-mrz-line1-row {
     flex-wrap: wrap;
   }
+}
+
+.js-internautenav-doc-fields[data-doc-type='ch_id'] {
+  /* border: black; */
+  border-color: gray;
+  border: 1px solid;
+  border-radius: 8px;
+  background: #a1bfca;
+  padding: 16px;
+}
+
+.internautenav-chid-fields-header {
+  height: 100px;
 }
