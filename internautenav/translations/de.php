@@ -73,3 +73,23 @@ $_MODULE['<{internautenav}prestashop>ajax_c8afc51d042bea02c016d50f701cf52f'] = '
 $_MODULE['<{internautenav}prestashop>ajax_ba42beea11a66e21bc73f4b953e82548'] = 'MRZ Zeile 2';
 $_MODULE['<{internautenav}prestashop>ajax_3295794b75985b99452e318bbbb12036'] = 'MRZ Zeile 3 (nur CH ID)';
 $_MODULE['<{internautenav}prestashop>ajax_4086ac267cc51dcffd8581677232ee9c'] = 'Bitte Zeilen exakt wie im Dokument eingeben.';
+
+// Upload-Panel + Status-Badges
+$_MODULE['<{internautenav}prestashop>internautenav_1f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Alterspruefung - Hochgeladene Dokumente';
+$_MODULE['<{internautenav}prestashop>internautenav_2f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Zu dieser Bestellung liegen keine hochgeladenen Dokumente vor.';
+$_MODULE['<{internautenav}prestashop>internautenav_3f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Originaldatei';
+$_MODULE['<{internautenav}prestashop>internautenav_4f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Aktion';
+$_MODULE['<{internautenav}prestashop>internautenav_5f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Herunterladen';
+$_MODULE['<{internautenav}prestashop>internautenav_6f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Manuelle Pruefungsentscheidung:';
+$_MODULE['<{internautenav}prestashop>internautenav_7f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Pruefung bestanden';
+$_MODULE['<{internautenav}prestashop>internautenav_8f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Pruefung abgelehnt';
+$_MODULE['<{internautenav}prestashop>internautenav_9f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Loescht alle Dokumente DSGVO-konform sofort.';
+$_MODULE['<{internautenav}prestashop>internautenav_af2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Pruefung automatisch bestanden';
+$_MODULE['<{internautenav}prestashop>internautenav_bf2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Pruefung manuell erledigen';
+$_MODULE['<{internautenav}prestashop>internautenav_cf2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Pruefung manuell bestanden';
+$_MODULE['<{internautenav}prestashop>internautenav_df2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Keine Pruefung vorhanden';
+$_MODULE['<{internautenav}prestashop>internautenav_ef2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Pruefung bei Uebergabe';
+$_MODULE['<{internautenav}prestashop>internautenav_ff2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Diese Versandart erfordert keine Online-Altersprüfung.';
+$_MODULE['<{internautenav}prestashop>internautenav_fa1e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Fuer diese Bestellung liegt kein Verifikationseintrag vor.';
+$_MODULE['<{internautenav}prestashop>internautenav_fb1e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = '%d Dokument(e) hochgeladen, noch nicht geprueft.';
+$_MODULE['<{internautenav}prestashop>internautenav_fc1e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Manuell';

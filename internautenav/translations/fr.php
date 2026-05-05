@@ -72,3 +72,23 @@ $_MODULE['<{internautenav}prestashop>ajax_c8afc51d042bea02c016d50f701cf52f'] = '
 $_MODULE['<{internautenav}prestashop>ajax_ba42beea11a66e21bc73f4b953e82548'] = 'Ligne MRZ 2';
 $_MODULE['<{internautenav}prestashop>ajax_3295794b75985b99452e318bbbb12036'] = 'Ligne MRZ 3 (carte d\'identité suisse uniquement)';
 $_MODULE['<{internautenav}prestashop>ajax_4086ac267cc51dcffd8581677232ee9c'] = 'Veuillez saisir les lignes exactement comme dans le document.';
+
+// Upload-Panel + Status-Badges
+$_MODULE['<{internautenav}prestashop>internautenav_1f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Verification d\'age - Documents telecharges';
+$_MODULE['<{internautenav}prestashop>internautenav_2f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Aucun document telecharge pour cette commande.';
+$_MODULE['<{internautenav}prestashop>internautenav_3f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Nom de fichier original';
+$_MODULE['<{internautenav}prestashop>internautenav_4f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Action';
+$_MODULE['<{internautenav}prestashop>internautenav_5f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Telecharger';
+$_MODULE['<{internautenav}prestashop>internautenav_6f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Decision manuelle de verification :';
+$_MODULE['<{internautenav}prestashop>internautenav_7f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Verification reussie';
+$_MODULE['<{internautenav}prestashop>internautenav_8f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Verification refusee';
+$_MODULE['<{internautenav}prestashop>internautenav_9f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Supprime tous les documents conformement au RGPD immediatement.';
+$_MODULE['<{internautenav}prestashop>internautenav_af2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Verification reussie automatiquement';
+$_MODULE['<{internautenav}prestashop>internautenav_bf2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Verification a faire manuellement';
+$_MODULE['<{internautenav}prestashop>internautenav_cf2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Verification reussie manuellement';
+$_MODULE['<{internautenav}prestashop>internautenav_df2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Aucune verification disponible';
+$_MODULE['<{internautenav}prestashop>internautenav_ef2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Verification a la livraison';
+$_MODULE['<{internautenav}prestashop>internautenav_ff2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Ce mode de livraison ne necessite pas une verification d\'age en ligne.';
+$_MODULE['<{internautenav}prestashop>internautenav_fa1e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Aucun enregistrement de verification trouve pour cette commande.';
+$_MODULE['<{internautenav}prestashop>internautenav_fb1e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = '%d document(s) telecharge(s), pas encore verifie(s).';
+$_MODULE['<{internautenav}prestashop>internautenav_fc1e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Manuel';
