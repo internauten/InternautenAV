@@ -36,7 +36,7 @@ $_MODULE['<{internautenav}prestashop>internautenav_1e8c192b93b08e816a1b9df13a66b
 $_MODULE['<{internautenav}prestashop>internautenav_ced123c28ff6715c302676ffd917d7a9'] = 'MRZ-Pruefung jetzt starten';
 $_MODULE['<{internautenav}prestashop>internautenav_3c2e70ff78ce52edb12afc7a5c1b277f'] = 'MRZ-Pruefung erfolgreich abgeschlossen. Die Zahlung ist freigeschaltet.';
 $_MODULE['<{internautenav}prestashop>internautenav_45c6662501837c3083030260413f34df'] = 'Solange die erfolgreiche Pruefung nicht serverseitig vorliegt, bleiben die Zahlungsfelder gesperrt.';
-$_MODULE['<{internautenav}prestashop>internautenav_448d315158bc82c3f64ceb007056fd0b'] = 'MRZ-Daten eingeben';
+$_MODULE['<{internautenav}prestashop>internautenav_448d315158bc82c3f64ceb007056fd0b'] = 'Altersprüfung';
 $_MODULE['<{internautenav}prestashop>internautenav_c691329cd3e16f8d829813b5feb2b451'] = 'Schliessen';
 $_MODULE['<{internautenav}prestashop>internautenav_a1f8eac04d0be0521423b13bd3e78b16'] = 'Jetzt pruefen';
 $_MODULE['<{internautenav}prestashop>internautenav_4086ac267cc51dcffd8581677232ee9c'] = 'Bitte Zeilen exakt wie im Dokument eingeben.';

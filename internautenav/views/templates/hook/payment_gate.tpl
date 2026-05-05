@@ -143,8 +143,10 @@
         </div>
 
         <div class="js-internautenav-doc-fields" data-doc-type="ch_pass" hidden>
+          <div class="internautenav-chpass-fields-header">
+            <h3>{$internautenav_pass_front_label|escape:'htmlall':'UTF-8'}</h3>
+          </div>
           <div class="form-group internautenav-group">
-            <label>{$internautenav_pass_front_label|escape:'htmlall':'UTF-8'}</label>
             <div
               class="internautenav-mrz-fixed js-internautenav-chpass-line1-text"
               data-line1="{$internautenav_pass_line1_prefill|default:''|escape:'htmlall':'UTF-8'}"
@@ -153,7 +155,6 @@
             </div>
           </div>
           <div class="form-group internautenav-group">
-            <label>{$internautenav_line2_label|escape:'htmlall':'UTF-8'}</label>
             <div class="internautenav-mrz-line1-row internautenav-chpass-line2-row">
               <input
                 id="internautenav_modal_ch_pass_number_{$internautenav_carrier_id|intval}"
