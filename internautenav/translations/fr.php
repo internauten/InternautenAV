@@ -1,7 +1,7 @@
 <?php
 
 global $_MODULE;
-$_MODULE = array();
+$_MODULE['<{internautenav}prestashop>internautenav_81834431849f4042446b7c19e12e8746'] = 'Recto du passeport';
 
 $_MODULE['<{internautenav}prestashop>internautenav_a5ffbe10bf416c7db8773f0ed801a022'] = 'Internauten AV';
 $_MODULE['<{internautenav}prestashop>internautenav_62e5cde27ad49944de104bbe346fd8e8'] = 'Vérification MRZ pour les modes de livraison sélectionnés (Carte d\'identité CH, Passeport CH, Passeport UE).';

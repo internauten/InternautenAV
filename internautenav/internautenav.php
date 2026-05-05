@@ -299,6 +299,7 @@ class Internautenav extends Module
             'internautenav_doc_ch_pass' => $this->l('form_doc_ch_pass'),
             'internautenav_doc_eu_pass' => $this->l('form_doc_eu_pass'),
             'internautenav_chid_fields_header' => $this->l('chid_fields_header'),
+            'internautenav_pass_front_label' => $this->l('pass_front_label'),
             'internautenav_line1_label' => $this->l('form_line1_label'),
             'internautenav_line2_label' => $this->l('form_line2_label'),
             'internautenav_line3_label' => $this->l('form_line3_label'),
@@ -398,11 +399,11 @@ class Internautenav extends Module
             return '';
         }
 
-        // Swiss passport prefill requested by user: PMCHE + SURNAME<<GIVEN<NAMES (44 chars total).
+        // Swiss passport MRZ TD3: PMCHE + SURNAME<<GIVENNAMES padded to 44 chars total.
         $prefix = 'PMCHE';
-        $nameBudget = 44 - Tools::strlen($prefix);
+        $nameBudget = 44 - Tools::strlen($prefix); // 39 chars for name field
 
-        if (Tools::strlen($surname . $givenNames) > ($nameBudget - 2)) {
+        if (Tools::strlen($surname . $givenNames) > ($nameBudget - 2)) { // -2 for '<<' separator
             $surnameMax = ($nameBudget - 2) - 1;
             $surname = Tools::substr($surname, 0, $surnameMax);
             $givenBudget = ($nameBudget - 2) - Tools::strlen($surname);

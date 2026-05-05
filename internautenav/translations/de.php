@@ -45,6 +45,7 @@ $_MODULE['<{internautenav}prestashop>internautenav_12309f0fc1ad868231073aef2aa31
 $_MODULE['<{internautenav}prestashop>internautenav_083559e45e69f446341bde604c601818'] = 'Schweizer Pass';
 $_MODULE['<{internautenav}prestashop>internautenav_bb60cfb540fd0525cf15dfe0afd27505'] = 'Andere Dokumente';
 $_MODULE['<{internautenav}prestashop>internautenav_c8afc51d042bea02c016d50f701cf52f'] = 'MRZ Zeile 1';
+$_MODULE['<{internautenav}prestashop>internautenav_81834431849f4042446b7c19e12e8746'] = 'Vorderseite Reisepass';
 $_MODULE['<{internautenav}prestashop>internautenav_ba42beea11a66e21bc73f4b953e82548'] = 'MRZ Zeile 2';
 $_MODULE['<{internautenav}prestashop>internautenav_3295794b75985b99452e318bbbb12036'] = 'MRZ Zeile 3 (nur CH ID)';
 $_MODULE['<{internautenav}prestashop>internautenav_f57f1c760872c0bd4ce7a17f73b8fd8e'] = 'Wie Rückseite der Schweizer ID';

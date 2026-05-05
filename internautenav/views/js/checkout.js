@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function () {
             errorNode.textContent = '';
         }
 
-        gate.querySelectorAll('.js-internautenav-chid-check-error, .js-internautenav-chid-line2-error').forEach(function (el) {
+        gate.querySelectorAll('.js-internautenav-chid-check-error, .js-internautenav-chid-line2-error, .js-internautenav-chpass-line2-error').forEach(function (el) {
             el.hidden = true;
             el.textContent = '';
         });
@@ -191,6 +191,60 @@ document.addEventListener('DOMContentLoaded', function () {
         return null;
     }
 
+    function validateChPassLine2(gate) {
+        var block = gate.querySelector('.js-internautenav-doc-fields[data-doc-type="ch_pass"]');
+        if (!block) { return null; }
+
+        var numberInput = block.querySelector('input[data-chpass-number="1"]');
+        var numberCheckInput = block.querySelector('input[data-chpass-number-check="1"]');
+        var birth7Input = block.querySelector('input[data-chpass-birth7="1"]');
+        var sexSpan = block.querySelector('[data-chpass-sex]');
+        var expiry7Input = block.querySelector('input[data-chpass-expiry7="1"]');
+        var compositeInput = block.querySelector('input[data-chpass-composite="1"]');
+
+        if (!numberInput || !numberCheckInput || !birth7Input || !sexSpan || !expiry7Input || !compositeInput) {
+            return null;
+        }
+
+        var docField = numberInput.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase().padEnd(8, '<').slice(0, 8) + '<';
+        var expectedDocCheck = computeMrzCheckDigit(docField);
+        if (expectedDocCheck !== parseInt(numberCheckInput.value, 10)) {
+            return 'Die Prüfziffer der Ausweisnummer stimmt nicht.';
+        }
+
+        var birth7 = birth7Input.value.replace(/[^0-9]/g, '');
+        var birth = birth7.slice(0, 6);
+        var birthCheck = birth7.slice(6, 7);
+        var expectedBirthCheck = computeMrzCheckDigit(birth);
+        if (expectedBirthCheck !== parseInt(birthCheck, 10)) {
+            return 'Die Prüfziffer des Geburtsdatums stimmt nicht.';
+        }
+
+        var expiry7 = expiry7Input.value.replace(/[^0-9]/g, '');
+        var expiry = expiry7.slice(0, 6);
+        var expiryCheck = expiry7.slice(6, 7);
+        var expectedExpiryCheck = computeMrzCheckDigit(expiry);
+        if (expectedExpiryCheck !== parseInt(expiryCheck, 10)) {
+            return 'Die Prüfziffer des Ablaufdatums stimmt nicht.';
+        }
+
+        var sex = (sexSpan.getAttribute('data-chpass-sex') || '<').toUpperCase().slice(0, 1);
+        var line2CompositeInput = docField
+            + numberCheckInput.value.replace(/[^0-9]/g, '')
+            + birth
+            + birthCheck
+            + expiry
+            + expiryCheck
+            + '<<<<<<<<<<<<<<<';
+
+        var expectedComposite = computeMrzCheckDigit(line2CompositeInput);
+        if (expectedComposite !== parseInt(compositeInput.value, 10)) {
+            return 'Die Gesamtprüfziffer stimmt nicht.';
+        }
+
+        return null;
+    }
+
     function collectPayload(gate) {
         var select = getDocTypeSelect(gate);
         var docType = select ? select.value : '';
@@ -237,6 +291,46 @@ document.addEventListener('DOMContentLoaded', function () {
             return (line3Node.getAttribute('data-line3') || line3Node.textContent || '').trim();
         }
 
+        function buildChPassLine1() {
+            if (!activeBlock) {
+                return '';
+            }
+            var line1Node = activeBlock.querySelector('.js-internautenav-chpass-line1-text');
+            if (!line1Node) {
+                return '';
+            }
+            var line1 = (line1Node.getAttribute('data-line1') || line1Node.textContent || '').trim().toUpperCase();
+            return line1.replace(/[^A-Z0-9<]/g, '<').padEnd(44, '<').slice(0, 44);
+        }
+
+        function buildChPassLine2() {
+            if (!activeBlock) {
+                return '';
+            }
+            var numberInput = activeBlock.querySelector('input[data-chpass-number="1"]');
+            var numberCheckInput = activeBlock.querySelector('input[data-chpass-number-check="1"]');
+            var birth7Input = activeBlock.querySelector('input[data-chpass-birth7="1"]');
+            var sexSpan = activeBlock.querySelector('[data-chpass-sex]');
+            var expiry7Input = activeBlock.querySelector('input[data-chpass-expiry7="1"]');
+            var compositeInput = activeBlock.querySelector('input[data-chpass-composite="1"]');
+
+            var docField = (numberInput ? numberInput.value : '').replace(/[^0-9A-Za-z]/g, '').toUpperCase().padEnd(8, '<').slice(0, 8) + '<';
+            var docCheck = (numberCheckInput ? numberCheckInput.value : '').replace(/[^0-9]/g, '').slice(0, 1) || '<';
+            var birth7 = (birth7Input ? birth7Input.value : '').replace(/[^0-9]/g, '');
+            var birth = birth7.slice(0, 6).padEnd(6, '<');
+            var birthCheck = birth7.slice(6, 7) || '<';
+            var sex = sexSpan ? (sexSpan.getAttribute('data-chpass-sex') || '<') : '<';
+            sex = sex.toUpperCase().replace(/[^MF<]/g, '<').slice(0, 1) || '<';
+            var expiry7 = (expiry7Input ? expiry7Input.value : '').replace(/[^0-9]/g, '');
+            var expiry = expiry7.slice(0, 6).padEnd(6, '<');
+            var expiryCheck = expiry7.slice(6, 7) || '<';
+            var composite = (compositeInput ? compositeInput.value : '').replace(/[^0-9]/g, '').slice(0, 1) || '<';
+
+            return (docField + docCheck + 'CHE' + birth + birthCheck + sex + expiry + expiryCheck + '<<<<<<<<<<<<<<<' + composite)
+                .padEnd(44, '<')
+                .slice(0, 44);
+        }
+
         function getLineValue(suffix) {
             if (!activeBlock) {
                 return '';
@@ -248,8 +342,8 @@ document.addEventListener('DOMContentLoaded', function () {
         return {
             carrierId: gate.getAttribute('data-carrier-id') || '',
             docType: docType,
-            line1: docType === 'ch_id' ? buildChIdLine1() : getLineValue('line1'),
-            line2: docType === 'ch_id' ? buildChIdLine2() : getLineValue('line2'),
+            line1: docType === 'ch_id' ? buildChIdLine1() : (docType === 'ch_pass' ? buildChPassLine1() : getLineValue('line1')),
+            line2: docType === 'ch_id' ? buildChIdLine2() : (docType === 'ch_pass' ? buildChPassLine2() : getLineValue('line2')),
             line3: docType === 'ch_id' ? buildChIdLine3() : getLineValue('line3')
         };
     }
@@ -353,6 +447,24 @@ document.addEventListener('DOMContentLoaded', function () {
             if (chIdLine2ErrorNode) {
                 chIdLine2ErrorNode.hidden = true;
                 chIdLine2ErrorNode.textContent = '';
+            }
+        }
+
+        if (payload.docType === 'ch_pass') {
+            var chPassLine2ErrorNode = gate.querySelector('.js-internautenav-chpass-line2-error');
+            var chPassLine2Error = validateChPassLine2(gate);
+            if (chPassLine2Error) {
+                if (chPassLine2ErrorNode) {
+                    chPassLine2ErrorNode.hidden = false;
+                    chPassLine2ErrorNode.textContent = chPassLine2Error;
+                } else {
+                    showError(gate, chPassLine2Error);
+                }
+                return;
+            }
+            if (chPassLine2ErrorNode) {
+                chPassLine2ErrorNode.hidden = true;
+                chPassLine2ErrorNode.textContent = '';
             }
         }
 

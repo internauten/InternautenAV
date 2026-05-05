@@ -31,7 +31,7 @@ class MrzValidator
             return self::invalid('Pass erwartet 2 MRZ-Zeilen mit je 44 Zeichen.');
         }
 
-        return self::parseTd3($l1, $l2);
+        return self::parseTd3($l1, $l2, $docType);
     }
 
     public static function isAdult(DateTimeImmutable $birthDate, $minimumAge)
@@ -86,10 +86,46 @@ class MrzValidator
         ];
     }
 
-    private static function parseTd3($line1, $line2)
+    private static function parseTd3($line1, $line2, $docType)
     {
         if (substr($line1, 0, 1) !== 'P') {
             return self::invalid('MRZ ungueltig: Pass muss mit P beginnen.');
+        }
+
+        if ($docType === self::DOC_CH_PASS) {
+            if (substr($line1, 0, 5) !== 'PMCHE') {
+                return self::invalid('MRZ ungueltig: CH Pass Zeile 1 muss mit PMCHE beginnen.');
+            }
+
+            if (substr($line2, 8, 1) !== '<') {
+                return self::invalid('MRZ ungueltig: CH Pass Zeile 2 erwartet ein Trennzeichen < nach der Ausweisnummer.');
+            }
+
+            if (substr($line2, 10, 3) !== 'CHE') {
+                return self::invalid('MRZ ungueltig: CH Pass Nationalitaet muss CHE sein.');
+            }
+
+            if (substr($line2, 28, 15) !== '<<<<<<<<<<<<<<<') {
+                return self::invalid('MRZ ungueltig: CH Pass Zeile 2 erwartet 15x < vor der Gesamtpruefziffer.');
+            }
+
+            $docRaw = substr($line2, 0, 9);
+            $docCheckDigit = substr($line2, 9, 1);
+            if (!self::validateCheckDigit($docRaw, $docCheckDigit)) {
+                return self::invalid('MRZ ungueltig: Pruefziffer Ausweisnummer stimmt nicht.');
+            }
+
+            $expiryRaw = substr($line2, 21, 6);
+            $expiryCheckDigit = substr($line2, 27, 1);
+            if (!self::validateCheckDigit($expiryRaw, $expiryCheckDigit)) {
+                return self::invalid('MRZ ungueltig: Pruefziffer Ablaufdatum stimmt nicht.');
+            }
+
+            $compositeRaw = substr($line2, 0, 10) . substr($line2, 13, 7) . substr($line2, 21, 22);
+            $compositeCheckDigit = substr($line2, 43, 1);
+            if (!self::validateCheckDigit($compositeRaw, $compositeCheckDigit)) {
+                return self::invalid('MRZ ungueltig: Gesamtpruefziffer stimmt nicht.');
+            }
         }
 
         $birthRaw = substr($line2, 13, 6);
@@ -187,6 +223,7 @@ class MrzValidator
 
     private static function extractNames($raw)
     {
+        // Both TD1 and TD3 use << to separate surname from given names
         $parts = explode('<<', (string) $raw, 2);
         $surname = self::normalizeNameReadable($parts[0]);
         $given = isset($parts[1]) ? self::normalizeNameReadable($parts[1]) : '';

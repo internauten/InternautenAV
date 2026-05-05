@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'OCR B';
+  src: url('../fonts/OCRB.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 .internautenav-payment-gate {
   margin: 0 0 18px;
 }
@@ -95,7 +103,8 @@
 }
 
 .internautenav-chid-check-error,
-.internautenav-chid-line2-error {
+.internautenav-chid-line2-error,
+.internautenav-chpass-line2-error {
   margin: 4px 0 0;
   font-size: 12px;
   color: #b42318;
@@ -104,22 +113,23 @@
 
 .internautenav-mrz-line1-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 3px;
+  gap: 0px;
 }
 
 .internautenav-mrz-fixed {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 20px;
-  letter-spacing: 0.06em;
-  font-weight: 700;
+  font-family: 'OCR B', 'Courier New', monospace;
+  font-weight: 400;
+  font-style: normal;
+  font-size: 12px;
   white-space: nowrap;
 }
 
 .internautenav-mrz-input-number,
 .internautenav-mrz-input-date,
 .internautenav-mrz-input-check {
-  font-family: 'Courier New', Courier, monospace;
+  font-family: 'OCR B', 'Courier New', monospace;
   text-transform: uppercase;
   text-align: center;
   padding-left: 4px;
@@ -139,6 +149,14 @@
 .internautenav-mrz-input-check {
   width: 3ch;
   min-width: 3ch;
+}
+
+.internautenav-chpass-line2-row + .internautenav-chpass-line2-row {
+  margin-top: 6px;
+}
+
+.internautenav-chpass-filler {
+  letter-spacing: 0.03em;
 }
 
 .internautenav-hint {
@@ -178,18 +196,28 @@ body.internautenav-modal-open {
     width: 100%;
   }
 
-  .internautenav-mrz-line1-row {
-    flex-wrap: wrap;
+  .internautenav-chpass-line2-row {
+    gap: 0px;
+  }
+
+  .internautenav-chpass-filler {
+    font-size: 17px;
   }
 }
 
-.js-internautenav-doc-fields[data-doc-type='ch_id'] {
-  /* border: black; */
+.js-internautenav-doc-fields {
   border-color: gray;
   border: 1px solid;
   border-radius: 8px;
-  background: #a1bfca;
   padding: 16px;
+}
+
+.js-internautenav-doc-fields[data-doc-type='ch_id'] {
+  background-image: linear-gradient(#c9effe, #b4efd7);
+}
+
+.js-internautenav-doc-fields[data-doc-type='ch_pass'] {
+  background-image: linear-gradient(120deg, #d6e9e5, #90d8c4, #efb3e4);
 }
 
 .internautenav-chid-fields-header {
