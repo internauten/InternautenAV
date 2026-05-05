@@ -1,0 +1,64 @@
+name: Release on Tag
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build release notes from commit messages
+        id: release_notes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          current_tag="${GITHUB_REF_NAME}"
+          previous_tag="$(git describe --tags --abbrev=0 "${current_tag}^" 2>/dev/null || true)"
+
+          {
+            if [ -n "${previous_tag}" ]; then
+              echo "## Changes since ${previous_tag}"
+              echo
+              commit_lines="$(git log --reverse --pretty=format:'### %s (%h)%n%n%b%n' "${previous_tag}..${current_tag}")"
+            else
+              echo "## Changes"
+              echo
+              commit_lines="$(git log --reverse --pretty=format:'### %s (%h)%n%n%b%n' "${current_tag}")"
+            fi
+
+            if [ -n "${commit_lines}" ]; then
+              echo "${commit_lines}"
+            else
+              echo "- Initial release"
+            fi
+          } > release-notes.md
+
+      - name: Create ZIP archive from internautenav/
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -d internautenav
+          zip -r "internautenav-${GITHUB_REF_NAME}.zip" internautenav
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body_path: release-notes.md
+          generate_release_notes: true
+          files: |
+            internautenav-${{ github.ref_name }}.zip

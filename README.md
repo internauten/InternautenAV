@@ -1,5 +1,8 @@
 # internautenav (PrestaShop 1.7.8+)
 
+[![Release on Tag](https://github.com/internauten/InternautenAV/actions/workflows/release-on-tag.yml/badge.svg)](https://github.com/internauten/InternautenAV/actions/workflows/release-on-tag.yml)
+[![Latest Release](https://img.shields.io/github/v/release/internauten/InternautenAV)](https://github.com/internauten/InternautenAV/releases)
+
 Modul zur Alters- und Identitätsprüfung für ausgewählte Versandarten via MRZ-Scan oder Dokumenten-Upload.
 
 ## Features
@@ -17,6 +20,29 @@ Modul zur Alters- und Identitätsprüfung für ausgewählte Versandarten via MRZ
 - Admin kann Prüfung manuell als **bestanden** oder **abgelehnt** markieren – löscht Dokumente sofort DSGVO-konform
 - Status-Badge oben auf der Bestellseite zeigt den aktuellen Prüfungsstatus auf einen Blick
 - DSGVO-konformer Upload-Retention-Cleanup (90 Tage Aufbewahrung)
+- Automatischer GitHub-Release bei Tag-Push (`vX.Y.Z`) inkl. ZIP-Artefakt aus `internautenav/`
+
+## GitHub Release Automation
+
+Der Workflow liegt unter `.github/workflows/release-on-tag.yml`.
+
+Bei jedem Push eines Tags im Format `v1.0.0` wird automatisch ein GitHub-Release erstellt.
+
+### Was der Workflow macht
+
+- Trigger: `push` auf Tags nach Muster `v*.*.*`
+- Release-Titel: `Release vX.Y.Z`
+- Release-Text:
+   - Commit-Liste zwischen letztem Tag und aktuellem Tag (inkl. Commit-Subject und Commit-Body)
+   - Zusätzlich automatisch generierte GitHub Release Notes
+- Release-Asset: ZIP-Datei `internautenav-vX.Y.Z.zip` aus dem Unterverzeichnis `internautenav/`
+
+### Verwendung
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
 
 ## Installation
 
