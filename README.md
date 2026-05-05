@@ -76,11 +76,15 @@ Voraussetzungen: im compose hat es unter volumes einen Eintrag - /home/dmo/inter
    cd ~/internauten
    git clone https://github.com/yourgithub/InternautenAV.git
    ```
-2. set owner, goup and rights
+2. set owner, goup and rights (so oder ähnlich)
+
    ```bash
-   sudo chown -R www-data:www-data ~/internauten/InternautenAV/internautenav
-   sudo chmod -R go+w ~/internauten/InternautenAV/internautenav
+   sudo chmod -R g+s .
+   sudo chgrp -R www-data .
+   sudo setfacl -R -d -m g:www-data:rwx .
+   sudo setfacl -R -m g:www-data:rwx .
    ```
+
 3. Bash in den Container und create symlink and set group:owner
    ```bash
    ln -s /internauten/InternautenAV/internautenav /var/www/html/modules/internautenav
