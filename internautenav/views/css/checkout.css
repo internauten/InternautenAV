@@ -165,6 +165,24 @@
   color: #6b6257;
 }
 
+.internautenav-upload-preview {
+  margin-top: 10px;
+  padding: 8px;
+  border: 1px solid #d7d2ca;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.internautenav-upload-preview-image {
+  display: block;
+  max-width: 100%;
+  max-height: 260px;
+  width: auto;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 4px;
+}
+
 .internautenav-modal-error {
   margin: 12px 0 0;
   color: #b42318;

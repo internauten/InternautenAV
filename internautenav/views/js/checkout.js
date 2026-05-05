@@ -42,6 +42,53 @@ document.addEventListener('DOMContentLoaded', function () {
         return gate.querySelector('.js-internautenav-error');
     }
 
+    function getUploadPreview(gate) {
+        return gate.querySelector('.js-internautenav-upload-preview');
+    }
+
+    function getUploadPreviewImage(gate) {
+        return gate.querySelector('.js-internautenav-upload-preview-image');
+    }
+
+    function clearUploadPreview(gate) {
+        var preview = getUploadPreview(gate);
+        var previewImage = getUploadPreviewImage(gate);
+
+        if (!preview || !previewImage) {
+            return;
+        }
+
+        var oldObjectUrl = previewImage.getAttribute('data-object-url');
+        if (oldObjectUrl && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+            URL.revokeObjectURL(oldObjectUrl);
+        }
+
+        previewImage.removeAttribute('src');
+        previewImage.removeAttribute('data-object-url');
+        preview.hidden = true;
+    }
+
+    function updateUploadPreview(gate, fileInput) {
+        var preview = getUploadPreview(gate);
+        var previewImage = getUploadPreviewImage(gate);
+        var selectedFile = fileInput && fileInput.files && fileInput.files.length > 0 ? fileInput.files[0] : null;
+
+        if (!preview || !previewImage) {
+            return;
+        }
+
+        clearUploadPreview(gate);
+
+        if (!selectedFile || typeof URL === 'undefined' || !URL.createObjectURL) {
+            return;
+        }
+
+        var objectUrl = URL.createObjectURL(selectedFile);
+        previewImage.setAttribute('src', objectUrl);
+        previewImage.setAttribute('data-object-url', objectUrl);
+        preview.hidden = false;
+    }
+
     function applyDocTypeBlocks(container, docType) {
         var blocks = container.querySelectorAll('.js-internautenav-doc-fields');
         blocks.forEach(function (block) {
@@ -54,6 +101,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     input.value = '';
                 }
             });
+            if (!isActive && block.getAttribute('data-doc-type') === 'upload') {
+                clearUploadPreview(container);
+            }
             if (isActive) {
                 inputs.forEach(function (input) {
                     if (!input.value && input.dataset && input.dataset.prefill) {
@@ -96,6 +146,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         modal.hidden = true;
         document.body.classList.remove('internautenav-modal-open');
+        clearUploadPreview(gate);
     }
 
     function showError(gate, message) {
@@ -588,6 +639,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (event.target.matches('.js-internautenav-doc-type')) {
                 clearError(gate);
                 setLineRules(gate);
+                return;
+            }
+
+            if (event.target.matches('input[data-upload-file="1"]')) {
+                clearError(gate);
+                updateUploadPreview(gate, event.target);
                 return;
             }
 

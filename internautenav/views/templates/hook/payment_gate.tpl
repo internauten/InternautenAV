@@ -268,6 +268,9 @@
               autocomplete="off"
             >
             <p class="help-block">{$internautenav_upload_hint|escape:'htmlall':'UTF-8'}</p>
+            <div class="internautenav-upload-preview js-internautenav-upload-preview" hidden>
+              <img class="internautenav-upload-preview-image js-internautenav-upload-preview-image" alt="" loading="lazy">
+            </div>
           </div>
         </div>
 
