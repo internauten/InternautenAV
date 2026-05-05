@@ -1,31 +1,62 @@
 # internautenav (PrestaShop 1.7.8+)
 
-Modul zur MRZ-basierten Alters- und Identitaetspruefung fuer ausgewaehlte Versandarten.
+Modul zur Alters- und Identitätsprüfung für ausgewählte Versandarten via MRZ-Scan oder Dokumenten-Upload.
 
 ## Features
 
 - Modulname: `internautenav`
-- Unterstuetzte Dokumenttypen:
-  - CH ID (TD1, 3 MRZ-Zeilen)
-  - CH Pass (TD3, 2 MRZ-Zeilen)
-  - EU Pass (TD3, 2 MRZ-Zeilen)
-- Unterschiedliche Eingabe je Dokumenttyp (2 oder 3 Zeilen)
-- Eingabe der MRZ-Zeilen durch den Benutzer im Checkout
-- Anzeige in der Versandart-Seite unter den konfigurierten Versandarten
-- Pflichtpruefung nur fuer ausgewaehlte Versandarten (Konfiguration im Modul)
-- Verifikation von:
-  - Geburtsdatum aus MRZ
-  - Name/Vorname gegen Lieferadresse
-  - Alter >= 18
+- Unterstützte Dokumenttypen im Checkout:
+  - **MRZ-Scan:** CH ID (TD1, 3 Zeilen), CH Pass / EU Pass (TD3, 2 Zeilen)
+  - **Dokumenten-Upload:** Bild des Ausweises hochladen (JPG, JPEG, PNG, BMP, GIF, WMF – max. 10 MB)
+- Pflichtprüfung nur für ausgewählte Versandarten (Konfiguration im Backoffice)
+- Verifikation von Geburtsdatum, Name/Vorname gegen Lieferadresse, Alter >= 18 (MRZ)
 - Verifikation wird gespeichert:
-  - **Registrierte Kunden:** Gespeichert in DB, bei Folgebestellungen nicht mehr erforderlich
-  - **Gaeste:** Gespeichert in der Session der aktuellen Bestellung
+  - **Registrierte Kunden:** In DB, bei Folgebestellungen nicht mehr erforderlich
+  - **Gäste:** Session der aktuellen Bestellung
+- Admin-Panel in der Bestellübersicht zeigt hochgeladene Dokumente mit Download-Link
+- DSGVO-konformer Upload-Retention-Cleanup (90 Tage Aufbewahrung)
 
 ## Installation
 
 1. Ordner `internautenav` in den PrestaShop-Ordner `modules/` kopieren.
 2. Modul im Backoffice installieren.
-3. Unter Modul-Konfiguration die Versandarten auswaehlen, die MRZ-pflichtig sein sollen.
+3. Unter Modul-Konfiguration die Versandarten auswählen, die Altersverifikation erfordern.
+
+## DSGVO Upload-Cleanup / Cron
+
+Hochgeladene Dokumente werden nach **90 Tagen** automatisch gelöscht. Der Cleanup-Mechanismus läuft auf zwei Wegen:
+
+### 1. Automatisch über PrestaShop Cronjobs-Modul (`ps_cronjobs`)
+
+Das Modul registriert den Hook `actionCronJob`. Wenn das offizielle PS-Cronjobs-Modul installiert ist, wird der Cleanup täglich über dessen Cron-Aufruf ausgelöst.
+
+### 2. Direkter HTTP/CLI-Aufruf via `cron.php`
+
+Die genaue Cron-URL inkl. Token findest du im Backoffice unter:  
+**Module → InternautenAV → Konfiguration → DSGVO Upload-Cleanup → Cron-URL**
+
+**Webserver (wget/curl, täglich um 03:00 Uhr):**
+
+```bash
+0 3 * * * wget -q "https://shop.example.com/modules/internautenav/cron.php?token=TOKEN" -O /dev/null
+```
+
+**PHP-CLI:**
+
+```bash
+0 3 * * * php /var/www/html/modules/internautenav/cron.php --token=TOKEN
+```
+
+> Der Token basiert auf `_COOKIE_KEY_` und ändert sich nicht, solange der PS-Sicherheitsschlüssel gleich bleibt.
+
+**Fallback:** Solange kein Cron eingerichtet ist, läuft der Cleanup gedrosselt (max. alle 6 Stunden) beim Seitenaufruf durch Kunden mit.
+
+### Manueller Cleanup im Backoffice
+
+Unter Modul-Konfiguration → DSGVO Upload-Cleanup stehen zwei Buttons zur Verfügung:
+
+- **Cleanup jetzt ausführen** – löscht alle Uploads älter als 90 Tage
+- **Alle Dateien ohne Altersprüfung löschen** – löscht alle Uploads, die keiner abgeschlossenen Bestellung zugeordnet sind
 
 ## Troubleshooting
 
@@ -33,65 +64,59 @@ Modul zur MRZ-basierten Alters- und Identitaetspruefung fuer ausgewaehlte Versan
 
 1. **Konfiguration prüfen:**
    - Im Backoffice unter Module > Internautenav AV
-   - Mindestens eine Versandart auswaehlen und speichern
-   - Mit Mehrfach-Select (Ctrl+Click) mehrere auswählen
+   - Mindestens eine Versandart auswählen und speichern
 
 2. **Debug-Information:**
    - Aufruf: `http://dein-shop.de/modules/internautenav/debug.php`
    - Zeigt Modul-Status, Konfiguration und Carrier
 
 3. **Checkout-Anforderungen:**
-   - Versandart muss in der Konfiguration ausgewaehlt sein
-   - Funktioniert fuer: registrierte Kunden UND Gaeste
-   - Registrierte Kunden: Verifikation wird nur einmalig pro Kunde geprueft
-   - Gaeste: Verifikation wird pro Gast-Bestellung geprueft (Session-basiert)
+   - Versandart muss in der Konfiguration ausgewählt sein
+   - Funktioniert für: registrierte Kunden UND Gäste
+   - Registrierte Kunden: Verifikation wird nur einmalig pro Kunde geprüft
+   - Gäste: Verifikation wird pro Gast-Bestellung geprüft (Session-basiert)
 
 4. **Datenbankprüfung:**
-   - Tabelle `wp_internautenav_customer_verification` muss existieren
+   - Tabellen `internautenav_customer_verification`, `internautenav_verification_log` und `internautenav_uploaded_documents` müssen existieren
    - Falls nicht: Modul neu installieren
 
 ## Technische Hinweise
 
-- Kompatibel ab PrestaShop `1.7.8.0`.
-- Modul nutzt die Hooks:
-  - `displayAfterCarrier` (Anzeige nach Versandart)
-  - `displayBeforeCarrier` (Alternative Anzeige)
-  - `displayCarrierExtraContent` (Fallback)
-  - `additionalCarrierFieldsForm` (Fallback)
-  - `actionCarrierProcess` (Prüfung)
-  - `actionValidateStepComplete` (Prüfung)
-  - `actionFrontControllerSetMedia` (JS/CSS)
-- Daten werden in Tabelle gespeichert:
-  - `PREFIX_internautenav_customer_verification`
-- JavaScript wird inline im Template geladen (Fallback für Hook-Probleme)
+- Kompatibel ab PrestaShop `1.7.8.0`
+- Registrierte Hooks:
+  - `actionFrontControllerSetMedia` – JS/CSS laden
+  - `displayPaymentTop` – Modal-Anzeige im Checkout
+  - `actionCarrierProcess` / `actionValidateStepComplete` – MRZ/Upload-Prüfung
+  - `actionValidateOrder` – Upload-Datei der Bestellung zuordnen
+  - `displayAdminOrderMainBottom` / `displayAdminOrder` – Upload-Panel im Backoffice
+  - `actionCronJob` – DSGVO-Cleanup via PS-Cronjobs-Modul
+- Dateispeicherung: `modules/internautenav/uploads/` (abgeschlossen) bzw. `uploads/pending/` (temporär bis Bestellabschluss)
+- Download-Links sind token-gesichert (kein Employee-Session-Zugriff erforderlich)
 
-## Develope
+## Develop
 
-Dammit die Container bei jedem neuen Modul nicht jedesmal neu erstellt werden müssen, versuchen wir es mit symlinks.
+Damit die Container bei jedem neuen Modul nicht jedesmal neu erstellt werden müssen, versuchen wir es mit Symlinks.
 
-Voraussetzungen: im compose hat es unter volumes einen Eintrag - /home/dmo/internauten:/internauten
+Voraussetzungen: im Compose hat es unter volumes einen Eintrag `- /home/dmo/internauten:/internauten`
 
-1. Bash ins WSL2 und holen des Repos aus dem fork
+1. Bash ins WSL2 und holen des Repos aus dem Fork:
    ```bash
    cd ~/internauten
    git clone https://github.com/yourgithub/InternautenAV.git
    ```
-2. set owner, goup and rights (so oder ähnlich)
-
+2. Owner, Group und Rights setzen:
    ```bash
    sudo chmod -R g+s .
    sudo chgrp -R www-data .
    sudo setfacl -R -d -m g:www-data:rwx .
    sudo setfacl -R -m g:www-data:rwx .
    ```
-
-3. Bash in den Container und create symlink and set group:owner
+3. Bash in den Container und Symlink erstellen:
    ```bash
    ln -s /internauten/InternautenAV/internautenav /var/www/html/modules/internautenav
    chown -h www-data:www-data /var/www/html/modules/internautenav
    ```
-4. Activate and configure Module in Prestashop  
-   In Prestashop backend go to Module Manager / not installed Modules and install the module.
+4. Modul im PrestaShop-Backoffice unter Modul-Manager installieren und konfigurieren.
 
 ## License
 

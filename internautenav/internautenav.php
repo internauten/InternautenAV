@@ -50,6 +50,7 @@ class Internautenav extends Module
             && $this->registerHook('actionValidateOrder')
             && $this->registerHook('displayAdminOrderMainBottom')
             && $this->registerHook('displayAdminOrder')
+            && $this->registerHook('actionCronJob')
             && $this->installDatabase()
             && Configuration::updateValue(self::CONF_REQUIRED_CARRIER_REFS, json_encode([]))
             && Configuration::updateValue(self::CONF_LAST_UPLOAD_CLEANUP_AT, '0');
@@ -302,6 +303,12 @@ class Internautenav extends Module
         $output .= '<tr><td><strong>' . $this->l('Letzter Cleanup') . '</strong></td><td>' . htmlspecialchars($lastCleanupDisplay, ENT_QUOTES, 'UTF-8') . '</td></tr>';
         $output .= '<tr><td><strong>' . $this->l('Ausstehende Uploads (nicht abgeschlossen)') . '</strong></td><td>' . $pendingCount . '</td></tr>';
         $output .= '<tr><td><strong>' . $this->l('Abgelaufene Eintraege') . '</strong></td><td>' . $expiredCount . '</td></tr>';
+        $cronToken = hash('sha256', _COOKIE_KEY_ . 'internautenav_cron');
+        $cronUrl = (Tools::usingSecureMode() ? 'https' : 'http') . '://' . Tools::getShopDomain(false, true)
+            . __PS_BASE_URI__ . 'modules/' . $this->name . '/cron.php?token=' . $cronToken;
+        $output .= '<tr><td><strong>' . $this->l('Cron-URL') . '</strong></td>'
+            . '<td><code style="word-break:break-all">' . htmlspecialchars($cronUrl, ENT_QUOTES, 'UTF-8') . '</code>'
+            . '<br><small class="text-muted">' . $this->l('Taeglicher Aufruf empfohlen, z.B. via wget oder curl.') . '</small></td></tr>';
         $output .= '</table>';
         $output .= '<form method="post" action="' . $cleanupAction . '" style="margin-top:12px">';
         $output .= '<button type="submit" name="submitInternautenavCleanup" class="btn btn-warning">'
@@ -367,6 +374,11 @@ class Internautenav extends Module
                 'priority' => 150,
             ]
         );
+    }
+
+    public function hookActionCronJob($params)
+    {
+        $this->runUploadRetentionCleanup(true);
     }
 
     public function hookDisplayPaymentTop($params)
@@ -625,8 +637,6 @@ class Internautenav extends Module
 
     public function hookActionValidateOrder($params)
     {
-        $this->runUploadRetentionCleanup(false);
-
         if (!$this->ensureUploadTable()) {
             return;
         }
@@ -650,8 +660,6 @@ class Internautenav extends Module
 
     public function hookDisplayAdminOrderMainBottom($params)
     {
-        $this->runUploadRetentionCleanup(false);
-
         if (!$this->ensureUploadTable()) {
             return '';
         }
@@ -1515,8 +1523,7 @@ class Internautenav extends Module
         return count($ids);
     }
 
-    private function runUploadRetentionCleanup($force = false)
-    {
+    public function runUploadRetentionCleanup($force = false)    {
         if (!$this->ensureUploadTable()) {
             return 0;
         }
