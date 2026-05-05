@@ -33,8 +33,8 @@ Bei jedem Push eines Tags im Format `v1.0.0` wird automatisch ein GitHub-Release
 - Trigger: `push` auf Tags nach Muster `v*.*.*`
 - Release-Titel: `Release vX.Y.Z`
 - Release-Text:
-   - Commit-Liste zwischen letztem Tag und aktuellem Tag (inkl. Commit-Subject und Commit-Body)
-   - Zusätzlich automatisch generierte GitHub Release Notes
+  - Commit-Liste zwischen letztem Tag und aktuellem Tag (inkl. Commit-Subject und Commit-Body)
+  - Zusätzlich automatisch generierte GitHub Release Notes
 - Release-Asset: ZIP-Datei `internautenav-vX.Y.Z.zip` aus dem Unterverzeichnis `internautenav/`
 
 ### Verwendung
