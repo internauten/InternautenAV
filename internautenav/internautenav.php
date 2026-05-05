@@ -25,15 +25,15 @@ class Internautenav extends Module
     {
         $this->name = 'internautenav';
         $this->tab = 'shipping_logistics';
-        $this->version = '1.1.0';
-        $this->author = 'Internauten';
+        $this->version = '1.1.1';
+        $this->author = 'die.internauten.ch';
         $this->need_instance = 0;
         $this->bootstrap = true;
 
         parent::__construct();
 
         $this->displayName = $this->l('Internauten AV');
-        $this->description = $this->l('MRZ-Verifikation fuer ausgewaehlte Versandarten (CH ID, CH Pass, EU Pass).');
+        $this->description = $this->l('MRZ-Verifikation fuer ausgewaehlte Versandarten (CH ID, CH Pass, EU Pass, Upload).');
         $this->ps_versions_compliancy = [
             'min' => '1.7.8.0',
             'max' => _PS_VERSION_,
