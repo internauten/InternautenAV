@@ -51,6 +51,7 @@ class Internautenav extends Module
             && $this->registerHook('displayAdminOrderMainBottom')
             && $this->registerHook('displayAdminOrder')
             && $this->registerHook('actionCronJob')
+            && $this->registerHook('displayAdminOrderTop')
             && $this->installDatabase()
             && Configuration::updateValue(self::CONF_REQUIRED_CARRIER_REFS, json_encode([]))
             && Configuration::updateValue(self::CONF_LAST_UPLOAD_CLEANUP_AT, '0');
@@ -658,6 +659,123 @@ class Internautenav extends Module
         $this->attachPendingUploadsToOrder($idCart, $idOrder);
     }
 
+    public function hookDisplayAdminOrderTop($params)
+    {
+        $idOrder = $this->resolveOrderIdFromHookParams($params);
+        if ($idOrder <= 0) {
+            return '';
+        }
+
+        $order = new Order($idOrder);
+        if (!Validate::isLoadedObject($order)) {
+            return '';
+        }
+
+        $carrier = new Carrier((int) $order->id_carrier);
+        $carrierRequired = Validate::isLoadedObject($carrier)
+            && $this->isCarrierReferenceRequired((int) $carrier->id_reference);
+
+        if (!$carrierRequired) {
+            return $this->renderOrderStatusBadge(
+                'info',
+                '&#128666; ' . htmlspecialchars($this->l('Pruefung bei Uebergabe'), ENT_QUOTES, 'UTF-8'),
+                htmlspecialchars($this->l('Diese Versandart erfordert keine Online-Altersprüfung.'), ENT_QUOTES, 'UTF-8')
+            );
+        }
+
+        // Offene Dokumente vorhanden → manuell prüfen
+        if ($this->ensureUploadTable()) {
+            $pendingDocs = (int) Db::getInstance()->getValue(
+                'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
+                 WHERE id_order = ' . $idOrder
+            );
+            if ($pendingDocs > 0) {
+                return $this->renderOrderStatusBadge(
+                    'warning',
+                    '&#9888; ' . htmlspecialchars($this->l('Pruefung manuell erledigen'), ENT_QUOTES, 'UTF-8'),
+                    htmlspecialchars(
+                        sprintf($this->l('%d Dokument(e) hochgeladen, noch nicht geprüft.'), $pendingDocs),
+                        ENT_QUOTES, 'UTF-8'
+                    )
+                );
+            }
+        }
+
+        // Log-Eintrag für diesen Warenkorb suchen
+        $idCart = (int) $order->id_cart;
+        if ($idCart > 0 && $this->ensureVerificationLogTable()) {
+            $logRow = Db::getInstance()->getRow(
+                'SELECT `result`, `result_message`, `doc_type`, `checked_at`
+                 FROM `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '`
+                 WHERE id_cart = ' . $idCart . '
+                 ORDER BY checked_at DESC'
+            );
+            if (is_array($logRow) && isset($logRow['result'])) {
+                $isManual = (strpos((string) ($logRow['result_message'] ?? ''), 'Manuelle Prüfung') !== false);
+                if ((int) $logRow['result'] === 1) {
+                    $label = $isManual
+                        ? '&#10003; ' . htmlspecialchars($this->l('Pruefung manuell bestanden'), ENT_QUOTES, 'UTF-8')
+                        : '&#10003; ' . htmlspecialchars($this->l('Pruefung automatisch bestanden'), ENT_QUOTES, 'UTF-8');
+                    $detail = htmlspecialchars(
+                        ($isManual ? 'Manuell' : ucfirst((string) $logRow['doc_type'])) . ' – ' . (string) $logRow['checked_at'],
+                        ENT_QUOTES, 'UTF-8'
+                    );
+                    return $this->renderOrderStatusBadge('success', $label, $detail);
+                } else {
+                    return $this->renderOrderStatusBadge(
+                        'danger',
+                        '&#10007; ' . htmlspecialchars($this->l('Pruefung abgelehnt'), ENT_QUOTES, 'UTF-8'),
+                        htmlspecialchars((string) ($logRow['result_message'] ?? ''), ENT_QUOTES, 'UTF-8')
+                    );
+                }
+            }
+        }
+
+        // Kein Eintrag gefunden
+        return $this->renderOrderStatusBadge(
+            'default',
+            '&#63; ' . htmlspecialchars($this->l('Keine Pruefung vorhanden'), ENT_QUOTES, 'UTF-8'),
+            htmlspecialchars($this->l('Für diese Bestellung liegt kein Verifikationseintrag vor.'), ENT_QUOTES, 'UTF-8')
+        );
+    }
+
+    private function renderOrderStatusBadge($type, $label, $detail)
+    {
+        $colors = [
+            'success' => '#3c763d',
+            'warning' => '#8a6d3b',
+            'danger'  => '#a94442',
+            'info'    => '#31708f',
+            'default' => '#555',
+        ];
+        $backgrounds = [
+            'success' => '#dff0d8',
+            'warning' => '#fcf8e3',
+            'danger'  => '#f2dede',
+            'info'    => '#d9edf7',
+            'default' => '#f5f5f5',
+        ];
+        $borders = [
+            'success' => '#d6e9c6',
+            'warning' => '#faebcc',
+            'danger'  => '#ebccd1',
+            'info'    => '#bce8f1',
+            'default' => '#ccc',
+        ];
+        $color = $colors[$type] ?? $colors['default'];
+        $bg    = $backgrounds[$type] ?? $backgrounds['default'];
+        $border = $borders[$type] ?? $borders['default'];
+
+        $out = '<div style="margin:8px 0 4px;padding:10px 14px;border:1px solid ' . $border . ';border-radius:4px;background:' . $bg . ';color:' . $color . ';font-size:13px">';
+        $out .= '<strong>' . $label . '</strong>';
+        if ($detail !== '') {
+            $out .= ' &nbsp;<span style="font-weight:normal;font-size:12px">' . $detail . '</span>';
+        }
+        $out .= '</div>';
+
+        return $out;
+    }
+
     public function hookDisplayAdminOrderMainBottom($params)
     {
         if (!$this->ensureUploadTable()) {
@@ -671,26 +789,31 @@ class Internautenav extends Module
 
         $rows = $this->getUploadedDocumentsByOrder($idOrder);
 
-        $output = '<div class="panel">';
-        $output .= '<h3>' . htmlspecialchars($this->l('Hochgeladene Dokumente (Alterspruefung)'), ENT_QUOTES, 'UTF-8') . '</h3>';
+        $output = '<div class="card mt-2">';
+        $output .= '<div class="card-header">'
+            . '<h3>' . htmlspecialchars($this->l('Altersprüfung – Hochgeladene Dokumente'), ENT_QUOTES, 'UTF-8') . '</h3>'
+            . '</div>';
+        $output .= '<div class="card-body">';
 
         if (empty($rows)) {
-            $output .= '<p class="text-muted">' . htmlspecialchars($this->l('Zu dieser Bestellung liegen keine hochgeladenen Dokumente vor.'), ENT_QUOTES, 'UTF-8') . '</p>';
-            $output .= '</div>';
+            $output .= '<p class="text-muted">'
+                . htmlspecialchars($this->l('Zu dieser Bestellung liegen keine hochgeladenen Dokumente vor.'), ENT_QUOTES, 'UTF-8')
+                . '</p>';
+            $output .= '</div></div>';
 
             return $output;
         }
 
-        $output .= '<div style="overflow-x:auto">';
-        $output .= '<table class="table table-bordered table-striped" style="font-size:12px">';
+        $output .= '<div class="table-responsive">';
+        $output .= '<table class="table table-hover">';
         $output .= '<thead><tr>';
         $output .= '<th>' . htmlspecialchars($this->l('ID'), ENT_QUOTES, 'UTF-8') . '</th>';
         $output .= '<th>' . htmlspecialchars($this->l('Originaldatei'), ENT_QUOTES, 'UTF-8') . '</th>';
         $output .= '<th>' . htmlspecialchars($this->l('Typ'), ENT_QUOTES, 'UTF-8') . '</th>';
         $output .= '<th>' . htmlspecialchars($this->l('MIME'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '<th>' . htmlspecialchars($this->l('Groesse'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '<th>' . htmlspecialchars($this->l('Grösse'), ENT_QUOTES, 'UTF-8') . '</th>';
         $output .= '<th>' . htmlspecialchars($this->l('Hochgeladen am'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '<th>' . htmlspecialchars($this->l('Download'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '<th>' . htmlspecialchars($this->l('Aktion'), ENT_QUOTES, 'UTF-8') . '</th>';
         $output .= '</tr></thead><tbody>';
 
         foreach ($rows as $row) {
@@ -704,18 +827,66 @@ class Internautenav extends Module
             $output .= '<tr>';
             $output .= '<td>' . $docId . '</td>';
             $output .= '<td>' . htmlspecialchars((string) $row['original_name'], ENT_QUOTES, 'UTF-8') . '</td>';
-            $output .= '<td>' . htmlspecialchars((string) $row['doc_type'], ENT_QUOTES, 'UTF-8') . '</td>';
-            $output .= '<td>' . htmlspecialchars((string) $row['mime_type'], ENT_QUOTES, 'UTF-8') . '</td>';
+            $output .= '<td><span class="badge">' . htmlspecialchars((string) $row['doc_type'], ENT_QUOTES, 'UTF-8') . '</span></td>';
+            $output .= '<td><small class="text-muted">' . htmlspecialchars((string) $row['mime_type'], ENT_QUOTES, 'UTF-8') . '</small></td>';
             $output .= '<td>' . htmlspecialchars($this->formatFileSize((int) $row['file_size']), ENT_QUOTES, 'UTF-8') . '</td>';
             $output .= '<td>' . htmlspecialchars((string) $row['created_at'], ENT_QUOTES, 'UTF-8') . '</td>';
-            $output .= '<td><a class="btn btn-default btn-xs" href="' . htmlspecialchars($downloadUrl, ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="noopener noreferrer">'
-                . htmlspecialchars($this->l('Datei herunterladen'), ENT_QUOTES, 'UTF-8')
+            $output .= '<td>'
+                . '<a class="btn btn-default btn-xs" href="' . htmlspecialchars($downloadUrl, ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="noopener noreferrer">'
+                . '<i class="icon-download"></i> ' . htmlspecialchars($this->l('Ansehen'), ENT_QUOTES, 'UTF-8')
                 . '</a></td>';
             $output .= '</tr>';
         }
 
         $output .= '</tbody></table>';
         $output .= '</div>';
+        $output .= '</div>';
+
+        // --- Manuelle Prüfungsentscheidung (card-footer) ---
+        $adminToken = hash('sha256', _COOKIE_KEY_ . 'internautenav_admin_action' . $idOrder);
+        $ajaxUrl = htmlspecialchars(__PS_BASE_URI__ . 'modules/' . $this->name . '/ajax.php', ENT_QUOTES, 'UTF-8');
+        $output .= '<div class="card-footer">';
+        $output .= '<span class="text-muted" style="margin-right:12px">'
+            . htmlspecialchars($this->l('Manuelle Pruefungsentscheidung:'), ENT_QUOTES, 'UTF-8')
+            . '</span>';
+        $output .= '<button class="btn btn-success btn-sm"'
+            . ' onclick="internautenavAdminAction(\'approve\', ' . $idOrder . ', \'' . $adminToken . '\', \'' . $ajaxUrl . '\'); return false;">'
+            . '<i class="icon-ok"></i> ' . htmlspecialchars($this->l('Pruefung bestanden'), ENT_QUOTES, 'UTF-8')
+            . '</button>';
+        $output .= ' <button class="btn btn-danger btn-sm"'
+            . ' onclick="internautenavAdminAction(\'reject\', ' . $idOrder . ', \'' . $adminToken . '\', \'' . $ajaxUrl . '\'); return false;">'
+            . '<i class="icon-remove"></i> ' . htmlspecialchars($this->l('Pruefung abgelehnt'), ENT_QUOTES, 'UTF-8')
+            . '</button>';
+        $output .= ' <span class="text-muted" style="margin-left:10px;font-size:11px">'
+            . '<i class="icon-shield"></i> '
+            . htmlspecialchars($this->l('Loescht alle Dokumente DSGVO-konform sofort.'), ENT_QUOTES, 'UTF-8')
+            . '</span>';
+        $output .= '</div>';
+
+        if (!defined('INTERNAUTENAV_ADMIN_JS_LOADED')) {
+            define('INTERNAUTENAV_ADMIN_JS_LOADED', true);
+            $output .= '<script>
+function internautenavAdminAction(action, orderId, token, ajaxUrl) {
+    var labels = {
+        approve: { confirm: "Prüfung als bestanden markieren und alle Dokumente DSGVO-konform löschen?", ok: "Prüfung bestanden gespeichert. Dokumente gelöscht." },
+        reject:  { confirm: "Prüfung als abgelehnt markieren und alle Dokumente DSGVO-konform löschen?", ok: "Prüfung abgelehnt gespeichert. Dokumente gelöscht." }
+    };
+    if (!confirm(labels[action].confirm)) { return; }
+    var params = new URLSearchParams();
+    params.append("action", "admin_" + action + "_documents");
+    params.append("id_order", orderId);
+    params.append("token", token);
+    fetch(ajaxUrl, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params.toString() })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) { alert(data.message || labels[action].ok); location.reload(); }
+            else { alert("Fehler: " + (data.message || "Unbekannter Fehler")); }
+        })
+        .catch(function() { alert("Verbindungsfehler beim Speichern der Entscheidung."); });
+}
+</script>';
+        }
+
         $output .= '</div>';
 
         return $output;
@@ -1678,8 +1849,80 @@ class Internautenav extends Module
         return (bool) $value;
     }
 
-    private function setCustomerVerified($idCustomer, array $data)
+    public function adminApproveOrderDocuments($orderId)
     {
+        return $this->adminDecideOrderDocuments((int) $orderId, true);
+    }
+
+    public function adminRejectOrderDocuments($orderId)
+    {
+        return $this->adminDecideOrderDocuments((int) $orderId, false);
+    }
+
+    private function adminDecideOrderDocuments($orderId, $approved)
+    {
+        $orderId = (int) $orderId;
+        if ($orderId <= 0 || !$this->ensureUploadTable() || !$this->ensureVerificationLogTable()) {
+            return ['success' => false, 'message' => 'Ungültige Bestellnummer oder Datenbankfehler.'];
+        }
+
+        $order = new Order($orderId);
+        if (!Validate::isLoadedObject($order)) {
+            return ['success' => false, 'message' => 'Bestellung nicht gefunden.'];
+        }
+
+        $rows = $this->getUploadedDocumentsByOrder($orderId);
+        if (empty($rows)) {
+            return ['success' => false, 'message' => 'Keine Dokumente für diese Bestellung gefunden.'];
+        }
+
+        $idCustomer = (int) $order->id_customer;
+        $idCart = (int) $order->id_cart;
+        $customerRef = $idCustomer > 0 ? 'customer-' . $idCustomer : 'cart-' . $idCart;
+        $resultLabel = $approved ? 'Manuelle Prüfung durch Admin: bestanden' : 'Manuelle Prüfung durch Admin: abgelehnt';
+
+        Db::getInstance()->insert(self::DB_LOG_TABLE, [
+            'customer_reference' => pSQL($customerRef),
+            'id_customer' => $idCustomer > 0 ? $idCustomer : null,
+            'id_guest' => null,
+            'id_cart' => $idCart > 0 ? $idCart : null,
+            'doc_type' => pSQL('upload'),
+            'result' => (int) $approved,
+            'result_message' => pSQL($resultLabel),
+            'checked_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        if ($approved && $idCustomer > 0) {
+            $this->setCustomerVerified($idCustomer, [
+                'doc_type' => 'upload',
+                'birth_date' => null,
+                'firstname' => null,
+                'lastname' => null,
+            ]);
+        }
+
+        $ids = [];
+        foreach ($rows as $row) {
+            $id = (int) $row['id_internautenav_uploaded_document'];
+            if ($id > 0) {
+                $this->deleteUploadedDocumentPhysicalFile((string) $row['file_name']);
+                $ids[] = $id;
+            }
+        }
+
+        if (!empty($ids)) {
+            Db::getInstance()->delete(
+                self::DB_UPLOAD_TABLE,
+                'id_internautenav_uploaded_document IN (' . implode(',', array_map('intval', $ids)) . ')'
+            );
+        }
+
+        $verb = $approved ? 'bestanden' : 'abgelehnt';
+
+        return ['success' => true, 'message' => 'Prüfung ' . $verb . '. ' . count($ids) . ' Datei(en) DSGVO-konform gelöscht.'];
+    }
+
+    private function setCustomerVerified($idCustomer, array $data)    {
         $idCustomer = (int) $idCustomer;
         if ($idCustomer <= 0) {
             return false;

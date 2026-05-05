@@ -73,6 +73,21 @@ if (!function_exists('internautenav_json_response')) {
     }
 }
 
+if ($action === 'admin_approve_documents' || $action === 'admin_reject_documents') {
+    $orderId = (int) Tools::getValue('id_order', 0);
+    $token = (string) Tools::getValue('token', '');
+    $expectedToken = hash('sha256', _COOKIE_KEY_ . 'internautenav_admin_action' . $orderId);
+    if ($orderId <= 0 || !hash_equals($expectedToken, $token)) {
+        internautenav_json_response(['success' => false, 'message' => 'Forbidden'], 403);
+    }
+    if ($action === 'admin_approve_documents') {
+        $result = $module->adminApproveOrderDocuments($orderId);
+    } else {
+        $result = $module->adminRejectOrderDocuments($orderId);
+    }
+    internautenav_json_response($result, !empty($result['success']) ? 200 : 400);
+}
+
 if ($action === 'download_document') {
     $documentId = (int) Tools::getValue('document_id', 0);
     $orderId = (int) Tools::getValue('id_order', 0);
