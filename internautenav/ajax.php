@@ -1,4 +1,5 @@
 <?php
+ob_start();
 
 $shopRoot = null;
 $candidates = [
@@ -62,6 +63,9 @@ $action = Tools::getValue('action', '');
 if (!function_exists('internautenav_json_response')) {
     function internautenav_json_response(array $payload, $statusCode = 200)
     {
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
         http_response_code((int) $statusCode);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($payload);
@@ -69,13 +73,43 @@ if (!function_exists('internautenav_json_response')) {
     }
 }
 
+if ($action === 'download_document') {
+    $documentId = (int) Tools::getValue('document_id', 0);
+    $orderId = (int) Tools::getValue('id_order', 0);
+    $module->serveUploadedDocumentDownload($documentId, $orderId);
+}
+
+if ($action === 'validate_upload') {
+    $carrierId = (int) Tools::getValue('carrier_id', 0);
+    $uploadFile = null;
+    if (isset($_FILES['document_upload']) && is_array($_FILES['document_upload'])) {
+        $uploadFile = $_FILES['document_upload'];
+    }
+
+    $result = $module->validateMrzForCarrier($carrierId, [
+        'doc_type' => 'upload',
+        'line1' => '',
+        'line2' => '',
+        'line3' => '',
+        'upload_file' => $uploadFile,
+    ], true);
+
+    internautenav_json_response($result, !empty($result['valid']) ? 200 : 400);
+}
+
 if ($action === 'validate_mrz') {
     $carrierId = (int) Tools::getValue('carrier_id', 0);
+    $uploadFile = null;
+    if (isset($_FILES['document_upload']) && is_array($_FILES['document_upload'])) {
+        $uploadFile = $_FILES['document_upload'];
+    }
+
     $result = $module->validateMrzForCarrier($carrierId, [
         'doc_type' => (string) Tools::getValue('doc_type', ''),
         'line1' => (string) Tools::getValue('line1', ''),
         'line2' => (string) Tools::getValue('line2', ''),
         'line3' => (string) Tools::getValue('line3', ''),
+        'upload_file' => $uploadFile,
     ], true);
 
     internautenav_json_response($result, !empty($result['valid']) ? 200 : 400);

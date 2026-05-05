@@ -50,6 +50,7 @@
             <option value="ch_id">{$internautenav_doc_ch_id|escape:'htmlall':'UTF-8'}</option>
             <option value="ch_pass">{$internautenav_doc_ch_pass|escape:'htmlall':'UTF-8'}</option>
             <option value="eu_pass">{$internautenav_doc_eu_pass|escape:'htmlall':'UTF-8'}</option>
+            <option value="upload">{$internautenav_doc_upload|escape:'htmlall':'UTF-8'}</option>
           </select>
         </div>
 
@@ -253,6 +254,22 @@
           </div>
         </div>
 
+        <div class="js-internautenav-doc-fields" data-doc-type="upload" hidden>
+          <div class="form-group internautenav-group">
+            <label for="internautenav_modal_upload_file_{$internautenav_carrier_id|intval}">{$internautenav_upload_label|escape:'htmlall':'UTF-8'}</label>
+            <input
+              id="internautenav_modal_upload_file_{$internautenav_carrier_id|intval}"
+              class="form-control"
+              type="file"
+              name="internautenav_modal_upload_file"
+              data-upload-file="1"
+              accept="image/jpeg,image/png,image/bmp,image/gif,image/wmf,image/x-wmf,.jpg,.jpeg,.png,.bmp,.gif,.wmf"
+              autocomplete="off"
+            >
+            <p class="help-block">{$internautenav_upload_hint|escape:'htmlall':'UTF-8'}</p>
+          </div>
+        </div>
+
         <p class="internautenav-hint">{$internautenav_hint|escape:'htmlall':'UTF-8'}</p>
         <p class="internautenav-modal-error js-internautenav-error" hidden></p>
 
@@ -260,7 +277,12 @@
           <button type="button" class="btn btn-secondary js-internautenav-close">
             {$internautenav_modal_close|escape:'htmlall':'UTF-8'}
           </button>
-          <button type="button" class="btn btn-primary js-internautenav-submit">
+          <button
+            type="button"
+            class="btn btn-primary js-internautenav-submit"
+            data-submit-default="{$internautenav_modal_submit|escape:'htmlall':'UTF-8'}"
+            data-submit-upload="{$internautenav_modal_submit_upload|escape:'htmlall':'UTF-8'}"
+          >
             {$internautenav_modal_submit|escape:'htmlall':'UTF-8'}
           </button>
         </div>

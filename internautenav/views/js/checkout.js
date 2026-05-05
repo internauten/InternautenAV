@@ -21,6 +21,19 @@ document.addEventListener('DOMContentLoaded', function () {
         return gate.querySelector('.js-internautenav-submit');
     }
 
+    function syncSubmitButtonLabel(gate) {
+        var submitButton = getSubmitButton(gate);
+        if (!submitButton) {
+            return;
+        }
+
+        var select = getDocTypeSelect(gate);
+        var docType = select ? select.value : '';
+        var defaultLabel = submitButton.getAttribute('data-submit-default') || submitButton.textContent;
+        var uploadLabel = submitButton.getAttribute('data-submit-upload') || defaultLabel;
+        submitButton.textContent = docType === 'upload' ? uploadLabel : defaultLabel;
+    }
+
     function getDocTypeSelect(gate) {
         return gate.querySelector('.js-internautenav-doc-type');
     }
@@ -57,6 +70,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         applyDocTypeBlocks(gate, select.value);
+        syncSubmitButtonLabel(gate);
     }
 
     function openModal(gate) {
@@ -344,7 +358,13 @@ document.addEventListener('DOMContentLoaded', function () {
             docType: docType,
             line1: docType === 'ch_id' ? buildChIdLine1() : (docType === 'ch_pass' ? buildChPassLine1() : getLineValue('line1')),
             line2: docType === 'ch_id' ? buildChIdLine2() : (docType === 'ch_pass' ? buildChPassLine2() : getLineValue('line2')),
-            line3: docType === 'ch_id' ? buildChIdLine3() : getLineValue('line3')
+            line3: docType === 'ch_id' ? buildChIdLine3() : getLineValue('line3'),
+            uploadFile: activeBlock && docType === 'upload'
+                ? (function () {
+                    var fileInput = activeBlock.querySelector('input[data-upload-file="1"]');
+                    return fileInput && fileInput.files && fileInput.files.length > 0 ? fileInput.files[0] : null;
+                })()
+                : null
         };
     }
 
@@ -468,35 +488,65 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        var baseUrl = (typeof internautenav_ajax_url !== 'undefined' && internautenav_ajax_url) ? internautenav_ajax_url : '/modules/internautenav/ajax.php';
-        var body = new URLSearchParams();
+        if (payload.docType === 'upload' && !payload.uploadFile) {
+            showError(gate, 'Bitte wählen Sie eine Datei aus.');
+            return;
+        }
 
-        body.set('action', 'validate_mrz');
-        body.set('carrier_id', payload.carrierId);
-        body.set('doc_type', payload.docType);
-        body.set('line1', payload.line1);
-        body.set('line2', payload.line2);
-        body.set('line3', payload.line3);
+        var baseUrl = (typeof internautenav_ajax_url !== 'undefined' && internautenav_ajax_url) ? internautenav_ajax_url : '/modules/internautenav/ajax.php';
+        var fetchOptions = {
+            method: 'POST',
+            credentials: 'same-origin'
+        };
+
+        if (payload.docType === 'upload') {
+            var formData = new FormData();
+            formData.append('action', 'validate_upload');
+            formData.append('carrier_id', payload.carrierId);
+            formData.append('doc_type', payload.docType);
+            formData.append('line1', '');
+            formData.append('line2', '');
+            formData.append('line3', '');
+            if (payload.uploadFile) {
+                formData.append('document_upload', payload.uploadFile);
+            }
+            fetchOptions.body = formData;
+        } else {
+            var body = new URLSearchParams();
+
+            body.set('action', 'validate_mrz');
+            body.set('carrier_id', payload.carrierId);
+            body.set('doc_type', payload.docType);
+            body.set('line1', payload.line1);
+            body.set('line2', payload.line2);
+            body.set('line3', payload.line3);
+
+            fetchOptions.headers = {
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+            };
+            fetchOptions.body = body.toString();
+        }
 
         setBusy(gate, true);
 
-        fetch(baseUrl, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-            },
-            body: body.toString()
-        })
+        fetch(baseUrl, fetchOptions)
             .then(function (response) {
-                return response.json().catch(function () {
-                    return null;
+                return response.text().then(function (text) {
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error('[internautenav] JSON parse error. Raw response:', text);
+                        return null;
+                    }
                 });
             })
             .then(function (result) {
                 if (!result || result.valid !== true) {
                     setBusy(gate, false);
-                    showError(gate, result && result.message ? result.message : 'MRZ-Pruefung fehlgeschlagen.');
+                    var errMsg = result && result.message
+                        ? result.message
+                        : (payload.docType === 'upload' ? 'Das Dokument konnte nicht gespeichert werden.' : 'Pruefung fehlgeschlagen.');
+                    showError(gate, errMsg);
                     return;
                 }
 
@@ -518,6 +568,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         gate.setAttribute('data-internautenav-bound', '1');
         setLineRules(gate);
+        syncSubmitButtonLabel(gate);
         setPaymentLocked(gate, gate.getAttribute('data-verified') !== '1');
 
         gate.addEventListener('click', function (event) {

@@ -13,8 +13,12 @@ require_once $mrzValidatorPath;
 class Internautenav extends Module
 {
     public const CONF_REQUIRED_CARRIER_REFS = 'INTERNAUTENAV_REQUIRED_CARRIER_REFS';
+    public const CONF_LAST_UPLOAD_CLEANUP_AT = 'INTERNAUTENAV_LAST_UPLOAD_CLEANUP_AT';
     public const DB_TABLE = 'internautenav_customer_verification';
     public const DB_LOG_TABLE = 'internautenav_verification_log';
+    public const DB_UPLOAD_TABLE = 'internautenav_uploaded_documents';
+    private const UPLOAD_RETENTION_DAYS = 90;
+    private const UPLOAD_CLEANUP_MIN_INTERVAL_SECONDS = 21600;
     private const SESSION_VERIFICATION_KEY = 'internautenav_checkout_verification';
 
     public function __construct()
@@ -43,13 +47,18 @@ class Internautenav extends Module
             && $this->registerHook('displayPaymentTop')
             && $this->registerHook('actionCarrierProcess')
             && $this->registerHook('actionValidateStepComplete')
+            && $this->registerHook('actionValidateOrder')
+            && $this->registerHook('displayAdminOrderMainBottom')
+            && $this->registerHook('displayAdminOrder')
             && $this->installDatabase()
-            && Configuration::updateValue(self::CONF_REQUIRED_CARRIER_REFS, json_encode([]));
+            && Configuration::updateValue(self::CONF_REQUIRED_CARRIER_REFS, json_encode([]))
+            && Configuration::updateValue(self::CONF_LAST_UPLOAD_CLEANUP_AT, '0');
     }
 
     public function uninstall()
     {
         return Configuration::deleteByName(self::CONF_REQUIRED_CARRIER_REFS)
+            && Configuration::deleteByName(self::CONF_LAST_UPLOAD_CLEANUP_AT)
             && $this->uninstallDatabase()
             && parent::uninstall();
     }
@@ -67,6 +76,31 @@ class Internautenav extends Module
             $selectedRefs = array_values(array_unique(array_map('intval', $selectedRefs)));
             Configuration::updateValue(self::CONF_REQUIRED_CARRIER_REFS, json_encode($selectedRefs));
             $output .= $this->displayConfirmation($this->l('backoffice_settings_saved'));
+        }
+
+        if (Tools::isSubmit('submitInternautenavCleanup')) {
+            $deleted = $this->runUploadRetentionCleanup(true);
+            if ($deleted > 0) {
+                $output .= $this->displayConfirmation(sprintf(
+                    $this->l('%d Datei(en) aelter als %d Tage wurden geloescht.'),
+                    $deleted,
+                    self::UPLOAD_RETENTION_DAYS
+                ));
+            } else {
+                $output .= $this->displayConfirmation($this->l('Keine abgelaufenen Dateien gefunden.'));
+            }
+        }
+
+        if (Tools::isSubmit('submitInternautenavCleanupPending')) {
+            $deleted = $this->deletePendingUploads();
+            if ($deleted > 0) {
+                $output .= $this->displayConfirmation(sprintf(
+                    $this->l('%d Datei(en) ohne abgeschlossene Altersprüfung wurden geloescht.'),
+                    $deleted
+                ));
+            } else {
+                $output .= $this->displayConfirmation($this->l('Keine ausstehenden Dateien gefunden.'));
+            }
         }
 
         $current = $this->getRequiredCarrierReferences();
@@ -233,17 +267,83 @@ class Internautenav extends Module
         $output .= '</div>';
         $output .= '</div>';
 
+        // --- DSGVO Upload-Cleanup Panel ---
+        $lastCleanup = Configuration::get(self::CONF_LAST_UPLOAD_CLEANUP_AT);
+        $lastCleanupDisplay = $lastCleanup ? date('d.m.Y H:i:s', (int) $lastCleanup) : $this->l('Noch nie ausgefuehrt');
+
+        $pendingCount = 0;
+        $expiredCount = 0;
+        if ($this->ensureUploadTable()) {
+            $cutoff = date('Y-m-d H:i:s', time() - self::UPLOAD_RETENTION_DAYS * 86400);
+            $pendingCount = (int) Db::getInstance()->getValue(
+                'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
+                 WHERE (id_order IS NULL OR id_order = 0)'
+            );
+            $expiredCount = (int) Db::getInstance()->getValue(
+                'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
+                 WHERE created_at < \'' . pSQL($cutoff) . '\''
+            );
+        }
+
+        $cleanupAction = htmlspecialchars(
+            $this->context->link->getAdminLink('AdminModules', true, [], [
+                'configure' => $this->name,
+                'tab_module' => $this->tab,
+                'module_name' => $this->name,
+            ]),
+            ENT_QUOTES,
+            'UTF-8'
+        );
+
+        $output .= '<div class="panel">';
+        $output .= '<h3>' . $this->l('DSGVO Upload-Cleanup') . '</h3>';
+        $output .= '<table class="table" style="font-size:13px;max-width:500px">';
+        $output .= '<tr><td><strong>' . $this->l('Aufbewahrungsfrist') . '</strong></td><td>' . self::UPLOAD_RETENTION_DAYS . ' ' . $this->l('Tage') . '</td></tr>';
+        $output .= '<tr><td><strong>' . $this->l('Letzter Cleanup') . '</strong></td><td>' . htmlspecialchars($lastCleanupDisplay, ENT_QUOTES, 'UTF-8') . '</td></tr>';
+        $output .= '<tr><td><strong>' . $this->l('Ausstehende Uploads (nicht abgeschlossen)') . '</strong></td><td>' . $pendingCount . '</td></tr>';
+        $output .= '<tr><td><strong>' . $this->l('Abgelaufene Eintraege') . '</strong></td><td>' . $expiredCount . '</td></tr>';
+        $output .= '</table>';
+        $output .= '<form method="post" action="' . $cleanupAction . '" style="margin-top:12px">';
+        $output .= '<button type="submit" name="submitInternautenavCleanup" class="btn btn-warning">'
+            . $this->l('Cleanup jetzt ausfuehren')
+            . '</button>';
+        $output .= ' <span class="help-block" style="display:inline-block;margin-left:8px">'
+            . sprintf($this->l('Loescht alle Uploads aelter als %d Tage.'), self::UPLOAD_RETENTION_DAYS)
+            . '</span>';
+        $output .= '</form>';
+        $output .= '<form method="post" action="' . $cleanupAction . '" style="margin-top:8px"'
+            . ' onsubmit="return confirm(\'' . $this->l('Wirklich alle Dateien ohne abgeschlossene Altersprüfung löschen?') . '\')">';
+        $output .= '<button type="submit" name="submitInternautenavCleanupPending" class="btn btn-danger">'
+            . $this->l('Alle Dateien ohne Altersprüfung löschen')
+            . '</button>';
+        $output .= ' <span class="help-block" style="display:inline-block;margin-left:8px">'
+            . $this->l('Loescht alle Uploads die keiner abgeschlossenen Bestellung zugeordnet sind.')
+            . '</span>';
+        $output .= '</form>';
+        $output .= '</div>';
+
         return $output;
     }
 
     public function hookActionFrontControllerSetMedia()
     {
+        $this->runUploadRetentionCleanup(false);
+
         if ($this->context->controller->php_self !== 'order') {
             return;
         }
 
         if (!$this->isRegisteredInHook('displayPaymentTop')) {
             $this->registerHook('displayPaymentTop');
+        }
+        if (!$this->isRegisteredInHook('actionValidateOrder')) {
+            $this->registerHook('actionValidateOrder');
+        }
+        if (!$this->isRegisteredInHook('displayAdminOrderMainBottom')) {
+            $this->registerHook('displayAdminOrderMainBottom');
+        }
+        if (!$this->isRegisteredInHook('displayAdminOrder')) {
+            $this->registerHook('displayAdminOrder');
         }
 
         Media::addJsDef([
@@ -294,15 +394,19 @@ class Internautenav extends Module
             'internautenav_modal_title' => $this->l('modal_title'),
             'internautenav_modal_close' => $this->l('modal_close'),
             'internautenav_modal_submit' => $this->l('modal_submit'),
+            'internautenav_modal_submit_upload' => $this->l('Speichern'),
             'internautenav_doc_label' => $this->l('form_doc_label'),
             'internautenav_doc_ch_id' => $this->l('form_doc_ch_id'),
             'internautenav_doc_ch_pass' => $this->l('form_doc_ch_pass'),
             'internautenav_doc_eu_pass' => $this->l('form_doc_eu_pass'),
+            'internautenav_doc_upload' => $this->l('Upload'),
             'internautenav_chid_fields_header' => $this->l('chid_fields_header'),
             'internautenav_pass_front_label' => $this->l('pass_front_label'),
             'internautenav_line1_label' => $this->l('form_line1_label'),
             'internautenav_line2_label' => $this->l('form_line2_label'),
             'internautenav_line3_label' => $this->l('form_line3_label'),
+            'internautenav_upload_label' => $this->l('Dokumentbild hochladen'),
+            'internautenav_upload_hint' => $this->l('Bitte laden Sie ein gut lesbares Bild eines amtlichen Dokuments hoch (Reisepass, Identitaetskarte, Aufenthaltsbewilligung oder anderes amtliches Dokument).'),
             'internautenav_hint' => $this->l('modal_hint'),
         ]);
 
@@ -519,6 +623,101 @@ class Internautenav extends Module
         return true;
     }
 
+    public function hookActionValidateOrder($params)
+    {
+        $this->runUploadRetentionCleanup(false);
+
+        if (!$this->ensureUploadTable()) {
+            return;
+        }
+
+        $order = isset($params['order']) ? $params['order'] : null;
+        $cart = isset($params['cart']) ? $params['cart'] : null;
+
+        if (!Validate::isLoadedObject($order) || !Validate::isLoadedObject($cart)) {
+            return;
+        }
+
+        $idOrder = (int) $order->id;
+        $idCart = (int) $cart->id;
+
+        if ($idOrder <= 0 || $idCart <= 0) {
+            return;
+        }
+
+        $this->attachPendingUploadsToOrder($idCart, $idOrder);
+    }
+
+    public function hookDisplayAdminOrderMainBottom($params)
+    {
+        $this->runUploadRetentionCleanup(false);
+
+        if (!$this->ensureUploadTable()) {
+            return '';
+        }
+
+        $idOrder = $this->resolveOrderIdFromHookParams($params);
+        if ($idOrder <= 0) {
+            return '';
+        }
+
+        $rows = $this->getUploadedDocumentsByOrder($idOrder);
+
+        $output = '<div class="panel">';
+        $output .= '<h3>' . htmlspecialchars($this->l('Hochgeladene Dokumente (Alterspruefung)'), ENT_QUOTES, 'UTF-8') . '</h3>';
+
+        if (empty($rows)) {
+            $output .= '<p class="text-muted">' . htmlspecialchars($this->l('Zu dieser Bestellung liegen keine hochgeladenen Dokumente vor.'), ENT_QUOTES, 'UTF-8') . '</p>';
+            $output .= '</div>';
+
+            return $output;
+        }
+
+        $output .= '<div style="overflow-x:auto">';
+        $output .= '<table class="table table-bordered table-striped" style="font-size:12px">';
+        $output .= '<thead><tr>';
+        $output .= '<th>' . htmlspecialchars($this->l('ID'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '<th>' . htmlspecialchars($this->l('Originaldatei'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '<th>' . htmlspecialchars($this->l('Typ'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '<th>' . htmlspecialchars($this->l('MIME'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '<th>' . htmlspecialchars($this->l('Groesse'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '<th>' . htmlspecialchars($this->l('Hochgeladen am'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '<th>' . htmlspecialchars($this->l('Download'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '</tr></thead><tbody>';
+
+        foreach ($rows as $row) {
+            $docId = (int) $row['id_internautenav_uploaded_document'];
+            $dlToken = hash('sha256', _COOKIE_KEY_ . 'internautenav_dl' . $docId . $idOrder);
+            $downloadUrl = __PS_BASE_URI__ . 'modules/' . $this->name . '/ajax.php?action=download_document'
+                . '&document_id=' . $docId
+                . '&id_order=' . (int) $idOrder
+                . '&token=' . rawurlencode($dlToken);
+
+            $output .= '<tr>';
+            $output .= '<td>' . $docId . '</td>';
+            $output .= '<td>' . htmlspecialchars((string) $row['original_name'], ENT_QUOTES, 'UTF-8') . '</td>';
+            $output .= '<td>' . htmlspecialchars((string) $row['doc_type'], ENT_QUOTES, 'UTF-8') . '</td>';
+            $output .= '<td>' . htmlspecialchars((string) $row['mime_type'], ENT_QUOTES, 'UTF-8') . '</td>';
+            $output .= '<td>' . htmlspecialchars($this->formatFileSize((int) $row['file_size']), ENT_QUOTES, 'UTF-8') . '</td>';
+            $output .= '<td>' . htmlspecialchars((string) $row['created_at'], ENT_QUOTES, 'UTF-8') . '</td>';
+            $output .= '<td><a class="btn btn-default btn-xs" href="' . htmlspecialchars($downloadUrl, ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="noopener noreferrer">'
+                . htmlspecialchars($this->l('Datei herunterladen'), ENT_QUOTES, 'UTF-8')
+                . '</a></td>';
+            $output .= '</tr>';
+        }
+
+        $output .= '</tbody></table>';
+        $output .= '</div>';
+        $output .= '</div>';
+
+        return $output;
+    }
+
+    public function hookDisplayAdminOrder($params)
+    {
+        return $this->hookDisplayAdminOrderMainBottom($params);
+    }
+
     public function validateMrzForCarrier($carrierId, array $payload, $persistOnSuccess = false)
     {
         $this->ensureVerificationLogTable();
@@ -537,6 +736,10 @@ class Internautenav extends Module
         $carrierReference = (int) $carrier->id_reference;
         if (!$this->isCarrierReferenceRequired($carrierReference)) {
             return $this->finalizeMrzValidationResult($docType, true, '');
+        }
+
+        if ($docType === 'upload') {
+            return $this->validateUploadForCarrier($carrierId, $carrierReference, $payload, $persistOnSuccess);
         }
 
         $validation = MrzValidator::validate(
@@ -879,15 +1082,16 @@ class Internautenav extends Module
             PRIMARY KEY (`id_customer`)
         ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8mb4;';
 
-        return Db::getInstance()->execute($sql) && $this->ensureVerificationLogTable();
+        return Db::getInstance()->execute($sql) && $this->ensureVerificationLogTable() && $this->ensureUploadTable();
     }
 
     private function uninstallDatabase()
     {
         $sql = 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . self::DB_TABLE . '`;';
         $logSql = 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '`;';
+        $uploadSql = 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`;';
 
-        return Db::getInstance()->execute($sql) && Db::getInstance()->execute($logSql);
+        return Db::getInstance()->execute($sql) && Db::getInstance()->execute($logSql) && Db::getInstance()->execute($uploadSql);
     }
 
     private function ensureVerificationLogTable()
@@ -910,17 +1114,483 @@ class Internautenav extends Module
         return Db::getInstance()->execute($sql);
     }
 
+    private function ensureUploadTable()
+    {
+        $sql = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '` (
+            `id_internautenav_uploaded_document` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+            `id_cart` INT(10) UNSIGNED NOT NULL,
+            `id_order` INT(10) UNSIGNED NULL,
+            `id_customer` INT(10) UNSIGNED NULL,
+            `doc_type` VARCHAR(16) NOT NULL,
+            `file_name` VARCHAR(255) NOT NULL,
+            `original_name` VARCHAR(255) NOT NULL,
+            `mime_type` VARCHAR(100) NOT NULL,
+            `file_size` INT(10) UNSIGNED NOT NULL,
+            `created_at` DATETIME NOT NULL,
+            `attached_at` DATETIME NULL,
+            PRIMARY KEY (`id_internautenav_uploaded_document`),
+            KEY `idx_id_cart` (`id_cart`),
+            KEY `idx_id_order` (`id_order`),
+            KEY `idx_created_at` (`created_at`)
+        ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8mb4;';
+
+        return Db::getInstance()->execute($sql);
+    }
+
+    private function validateUploadForCarrier($carrierId, $carrierReference, array $payload, $persistOnSuccess)
+    {
+        $uploadFile = isset($payload['upload_file']) && is_array($payload['upload_file']) ? $payload['upload_file'] : null;
+        if (!$uploadFile) {
+            return $this->finalizeMrzValidationResult('upload', false, 'Bitte waehlen Sie eine Datei zum Hochladen.');
+        }
+
+        $storeResult = $this->storeUploadedDocument($uploadFile, 'upload');
+        if (empty($storeResult['valid'])) {
+            return $this->finalizeMrzValidationResult('upload', false, (string) ($storeResult['message'] !== '' ? $storeResult['message'] : 'Das Dokument konnte nicht gespeichert werden.'));
+        }
+
+        // Nach erfolgreichem move_uploaded_file existiert die tmp-Datei nicht mehr.
+        // Symfony's FileBag (Request::createFromGlobals) wirft sonst FileNotFoundException,
+        // wenn nachfolgende PS-Operationen (Cart::getDeliveryOption etc.) den Dispatcher triggern.
+        unset($_FILES['document_upload']);
+
+        if ($persistOnSuccess) {
+            $verificationData = [
+                'carrier_id' => (int) $carrierId,
+                'carrier_reference' => (int) $carrierReference,
+                'doc_type' => 'upload',
+                'birth_date' => null,
+                'firstname' => '',
+                'lastname' => '',
+                'uploaded_document_id' => (int) ($storeResult['uploaded_document_id'] ?? 0),
+            ];
+
+            if ($this->context->customer->isLogged()) {
+                $idCustomer = (int) $this->context->customer->id;
+                if (!$this->setCustomerVerified($idCustomer, $verificationData)) {
+                    return $this->finalizeMrzValidationResult('upload', false, 'Verifikationsstatus konnte nicht gespeichert werden.');
+                }
+            } else {
+                $this->setCheckoutVerificationState($verificationData);
+            }
+        }
+
+        return $this->finalizeMrzValidationResult('upload', true, 'Dokument erfolgreich gespeichert.');
+    }
+
+    private function storeUploadedDocument(array $uploadFile, $docType)
+    {
+        if (!$this->ensureUploadTable()) {
+            return [
+                'valid' => false,
+                'message' => 'Datenbank-Fehler: Upload-Tabelle konnte nicht erstellt werden.',
+            ];
+        }
+
+        $uploadError = isset($uploadFile['error']) ? (int) $uploadFile['error'] : UPLOAD_ERR_NO_FILE;
+        if ($uploadError !== UPLOAD_ERR_OK) {
+            $uploadErrorMessages = [
+                UPLOAD_ERR_INI_SIZE   => 'Die Datei ueberschreitet die maximale Upload-Groesse (server).',
+                UPLOAD_ERR_FORM_SIZE  => 'Die Datei ueberschreitet die maximale Upload-Groesse (formular).',
+                UPLOAD_ERR_PARTIAL    => 'Die Datei wurde nur teilweise hochgeladen.',
+                UPLOAD_ERR_NO_FILE    => 'Keine Datei empfangen.',
+                UPLOAD_ERR_NO_TMP_DIR => 'Kein temporaeres Verzeichnis verfuegbar.',
+                UPLOAD_ERR_CANT_WRITE => 'Datei konnte nicht auf dem Server gespeichert werden.',
+            ];
+            $errMsg = isset($uploadErrorMessages[$uploadError])
+                ? $uploadErrorMessages[$uploadError]
+                : 'Datei-Upload fehlgeschlagen (Code ' . $uploadError . ').';
+            return ['valid' => false, 'message' => $errMsg];
+        }
+
+        $tmpName = isset($uploadFile['tmp_name']) ? (string) $uploadFile['tmp_name'] : '';
+        if ($tmpName === '' || !is_uploaded_file($tmpName)) {
+            return [
+                'valid' => false,
+                'message' => 'Ungueltige Upload-Datei (Sicherheitspruefung fehlgeschlagen).',
+            ];
+        }
+
+        $maxSize = 10 * 1024 * 1024;
+        $fileSize = isset($uploadFile['size']) ? (int) $uploadFile['size'] : 0;
+        if ($fileSize <= 0 || $fileSize > $maxSize) {
+            return [
+                'valid' => false,
+                'message' => 'Die Datei ist zu gross. Maximal 10 MB sind erlaubt.',
+            ];
+        }
+
+        $originalName = isset($uploadFile['name']) ? (string) $uploadFile['name'] : 'document';
+        $originalName = basename($originalName);
+        $extension = Tools::strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'wmf'];
+        if (!in_array($extension, $allowedExtensions, true)) {
+            return [
+                'valid' => false,
+                'message' => 'Bitte laden Sie eine Datei im Format JPG, JPEG, PNG, BMP, GIF oder WMF hoch. (Erkannte Endung: ' . htmlspecialchars($extension, ENT_QUOTES, 'UTF-8') . ')',
+            ];
+        }
+
+        $mimeType = '';
+        if (function_exists('finfo_open')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            if ($finfo) {
+                $detectedMime = finfo_file($finfo, $tmpName);
+                if (is_string($detectedMime)) {
+                    $mimeType = $detectedMime;
+                }
+                finfo_close($finfo);
+            }
+        }
+
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/bmp', 'image/x-bmp', 'image/gif', 'image/wmf', 'image/x-wmf', 'application/x-msmetafile'];
+        if ($mimeType !== '' && !in_array($mimeType, $allowedMimes, true)) {
+            return [
+                'valid' => false,
+                'message' => 'Ungueltige Datei. Erkannter Typ: ' . $mimeType . '. Erlaubt: JPG, PNG, BMP, GIF, WMF.',
+            ];
+        }
+
+        $uploadDir = rtrim(_PS_MODULE_DIR_, '/\\') . '/' . $this->name . '/uploads';
+        $pendingDir = $uploadDir . '/pending';
+        if (!is_dir($pendingDir) && !@mkdir($pendingDir, 0755, true)) {
+            return [
+                'valid' => false,
+                'message' => $this->l('Upload-Verzeichnis konnte nicht erstellt werden.'),
+            ];
+        }
+
+        $randomPart = '';
+        try {
+            $randomPart = bin2hex(random_bytes(12));
+        } catch (Exception $exception) {
+            $randomPart = sha1(uniqid((string) mt_rand(), true));
+        }
+
+        $generated = date('YmdHis') . '_' . $randomPart;
+        $safeFileName = $generated . '.' . $extension;
+        $targetPath = $pendingDir . '/' . $safeFileName;
+
+        if (!move_uploaded_file($tmpName, $targetPath)) {
+            return [
+                'valid' => false,
+                'message' => 'Die Datei konnte nicht ins Zielverzeichnis verschoben werden.',
+            ];
+        }
+
+        $idCart = Validate::isLoadedObject($this->context->cart) ? (int) $this->context->cart->id : 0;
+        $idCustomer = Validate::isLoadedObject($this->context->customer) ? (int) $this->context->customer->id : null;
+        $insertOk = Db::getInstance()->insert(self::DB_UPLOAD_TABLE, [
+            'id_cart' => $idCart,
+            'id_order' => null,
+            'id_customer' => $idCustomer > 0 ? $idCustomer : null,
+            'doc_type' => pSQL((string) $docType),
+            'file_name' => pSQL($safeFileName),
+            'original_name' => pSQL($originalName),
+            'mime_type' => pSQL($mimeType !== '' ? $mimeType : 'application/octet-stream'),
+            'file_size' => (int) $fileSize,
+            'created_at' => date('Y-m-d H:i:s'),
+            'attached_at' => null,
+        ]);
+
+        if (!$insertOk) {
+            @unlink($targetPath);
+            return [
+                'valid' => false,
+                'message' => 'Datenbankfehler beim Speichern des Dokuments.',
+            ];
+        }
+
+        return [
+            'valid' => true,
+            'uploaded_document_id' => (int) Db::getInstance()->Insert_ID(),
+        ];
+    }
+
+    private function attachPendingUploadsToOrder($idCart, $idOrder)
+    {
+        $idCart = (int) $idCart;
+        $idOrder = (int) $idOrder;
+        if ($idCart <= 0 || $idOrder <= 0) {
+            return;
+        }
+
+        $rows = Db::getInstance()->executeS(
+            'SELECT `id_internautenav_uploaded_document`, `file_name`
+             FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
+             WHERE id_cart = ' . $idCart . ' AND (id_order IS NULL OR id_order = 0)'
+        );
+
+        if (!is_array($rows) || empty($rows)) {
+            return;
+        }
+
+        $baseDir = rtrim(_PS_MODULE_DIR_, '/\\') . '/' . $this->name . '/uploads';
+        $pendingDir = $baseDir . '/pending';
+
+        foreach ($rows as $row) {
+            $safeFile = basename((string) $row['file_name']);
+            if ($safeFile === '') {
+                continue;
+            }
+            $src = $pendingDir . '/' . $safeFile;
+            $dst = $baseDir . '/' . $safeFile;
+            if (is_file($src)) {
+                @rename($src, $dst);
+            }
+        }
+
+        Db::getInstance()->update(
+            self::DB_UPLOAD_TABLE,
+            [
+                'id_order' => $idOrder,
+                'attached_at' => date('Y-m-d H:i:s'),
+            ],
+            'id_cart = ' . $idCart . ' AND (id_order IS NULL OR id_order = 0)'
+        );
+    }
+
+    public function serveUploadedDocumentDownload($documentId, $orderId = 0)
+    {
+        if (!$this->ensureUploadTable()) {
+            http_response_code(500);
+            exit('Upload table is not available');
+        }
+
+        $documentId = (int) $documentId;
+        $orderId = (int) $orderId;
+
+        // Token-Authentifizierung: gebunden an documentId + orderId + _COOKIE_KEY_
+        $expectedToken = hash('sha256', _COOKIE_KEY_ . 'internautenav_dl' . $documentId . $orderId);
+        $providedToken = isset($_GET['token']) ? (string) $_GET['token'] : '';
+        if (!hash_equals($expectedToken, $providedToken)) {
+            http_response_code(403);
+            exit('Forbidden');
+        }
+        if ($documentId <= 0) {
+            http_response_code(404);
+            exit('Document not found');
+        }
+
+        $where = 'id_internautenav_uploaded_document = ' . $documentId . ' AND id_order > 0';
+        if ($orderId > 0) {
+            $where .= ' AND id_order = ' . $orderId;
+        }
+
+        $row = Db::getInstance()->getRow(
+            'SELECT * FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '` WHERE ' . $where
+        );
+
+        if (!is_array($row) || empty($row)) {
+            http_response_code(404);
+            exit('Document not found');
+        }
+
+        $safeStoredName = basename((string) $row['file_name']);
+        if ($safeStoredName === '') {
+            http_response_code(404);
+            exit('File missing');
+        }
+
+        $baseDir = rtrim(_PS_MODULE_DIR_, '/\\') . '/' . $this->name . '/uploads';
+        $candidatePaths = [
+            $baseDir . '/pending/' . $safeStoredName,
+            $baseDir . '/' . $safeStoredName,
+        ];
+
+        $resolvedPath = '';
+        foreach ($candidatePaths as $candidatePath) {
+            if (is_file($candidatePath)) {
+                $resolvedPath = $candidatePath;
+                break;
+            }
+        }
+
+        if ($resolvedPath === '') {
+            http_response_code(404);
+            exit('File missing');
+        }
+
+        $downloadName = trim((string) $row['original_name']) !== '' ? (string) $row['original_name'] : $safeStoredName;
+        $mimeType = trim((string) $row['mime_type']) !== '' ? (string) $row['mime_type'] : 'application/octet-stream';
+        $fileSize = (int) filesize($resolvedPath);
+
+        if (ob_get_level()) {
+            @ob_end_clean();
+        }
+
+        header('Content-Description: File Transfer');
+        header('Content-Type: ' . $mimeType);
+        header('Content-Disposition: attachment; filename="' . str_replace('"', '', $downloadName) . '"');
+        header('Content-Length: ' . $fileSize);
+        header('Cache-Control: private, must-revalidate, max-age=0');
+        header('Pragma: public');
+        header('Expires: 0');
+
+        readfile($resolvedPath);
+        exit;
+    }
+
+    private function resolveOrderIdFromHookParams($params)
+    {
+        if (isset($params['id_order'])) {
+            return (int) $params['id_order'];
+        }
+
+        if (isset($params['order']) && Validate::isLoadedObject($params['order'])) {
+            return (int) $params['order']->id;
+        }
+
+        return (int) Tools::getValue('id_order');
+    }
+
+    private function getUploadedDocumentsByOrder($idOrder)
+    {
+        $idOrder = (int) $idOrder;
+        if ($idOrder <= 0) {
+            return [];
+        }
+
+        $sql = 'SELECT *
+            FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
+            WHERE `id_order` = ' . $idOrder . '
+            ORDER BY `created_at` DESC';
+
+        $rows = Db::getInstance()->executeS($sql);
+
+        return is_array($rows) ? $rows : [];
+    }
+
+    private function formatFileSize($bytes)
+    {
+        $bytes = max(0, (int) $bytes);
+        if ($bytes < 1024) {
+            return $bytes . ' B';
+        }
+
+        $kb = $bytes / 1024;
+        if ($kb < 1024) {
+            return number_format($kb, 1, '.', '') . ' KB';
+        }
+
+        $mb = $kb / 1024;
+        return number_format($mb, 2, '.', '') . ' MB';
+    }
+
+    private function deletePendingUploads()
+    {
+        if (!$this->ensureUploadTable()) {
+            return 0;
+        }
+
+        $rows = Db::getInstance()->executeS(
+            'SELECT `id_internautenav_uploaded_document`, `file_name`
+             FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
+             WHERE (id_order IS NULL OR id_order = 0)'
+        );
+
+        if (!is_array($rows) || empty($rows)) {
+            return 0;
+        }
+
+        $ids = [];
+        foreach ($rows as $row) {
+            $id = (int) ($row['id_internautenav_uploaded_document'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $this->deleteUploadedDocumentPhysicalFile((string) ($row['file_name'] ?? ''));
+            $ids[] = $id;
+        }
+
+        if (empty($ids)) {
+            return 0;
+        }
+
+        Db::getInstance()->delete(
+            self::DB_UPLOAD_TABLE,
+            'id_internautenav_uploaded_document IN (' . implode(',', array_map('intval', $ids)) . ')'
+        );
+
+        return count($ids);
+    }
+
+    private function runUploadRetentionCleanup($force = false)
+    {
+        if (!$this->ensureUploadTable()) {
+            return 0;
+        }
+
+        $now = time();
+        $lastRun = (int) Configuration::get(self::CONF_LAST_UPLOAD_CLEANUP_AT);
+        if (!$force && $lastRun > 0 && ($now - $lastRun) < self::UPLOAD_CLEANUP_MIN_INTERVAL_SECONDS) {
+            return 0;
+        }
+
+        Configuration::updateValue(self::CONF_LAST_UPLOAD_CLEANUP_AT, (string) $now);
+
+        $cutoff = date('Y-m-d H:i:s', strtotime('-' . self::UPLOAD_RETENTION_DAYS . ' days', $now));
+        $rows = Db::getInstance()->executeS(
+            'SELECT `id_internautenav_uploaded_document`, `file_name`
+             FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
+             WHERE `created_at` < \'' . pSQL($cutoff) . '\''
+        );
+
+        if (!is_array($rows) || empty($rows)) {
+            return 0;
+        }
+
+        $ids = [];
+        foreach ($rows as $row) {
+            $id = (int) ($row['id_internautenav_uploaded_document'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+
+            $this->deleteUploadedDocumentPhysicalFile((string) ($row['file_name'] ?? ''));
+            $ids[] = $id;
+        }
+
+        if (empty($ids)) {
+            return 0;
+        }
+
+        Db::getInstance()->delete(
+            self::DB_UPLOAD_TABLE,
+            'id_internautenav_uploaded_document IN (' . implode(',', array_map('intval', $ids)) . ')'
+        );
+
+        return count($ids);
+    }
+
+    private function deleteUploadedDocumentPhysicalFile($storedFileName)
+    {
+        $safeStoredName = basename((string) $storedFileName);
+        if ($safeStoredName === '') {
+            return;
+        }
+
+        $baseDir = rtrim(_PS_MODULE_DIR_, '/\\') . '/' . $this->name . '/uploads';
+        $candidatePaths = [
+            $baseDir . '/pending/' . $safeStoredName,
+            $baseDir . '/' . $safeStoredName,
+        ];
+
+        foreach ($candidatePaths as $candidatePath) {
+            if (is_file($candidatePath)) {
+                @unlink($candidatePath);
+            }
+        }
+    }
+
     private function finalizeMrzValidationResult($docType, $isValid, $message)
     {
         $this->logMrzVerificationAttempt((string) $docType, (bool) $isValid, (string) $message);
 
         $result = [
             'valid' => (bool) $isValid,
+            'message' => (string) $message,
         ];
-
-        if (!$isValid && $message !== '') {
-            $result['message'] = (string) $message;
-        }
 
         return $result;
     }
