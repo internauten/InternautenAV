@@ -33,8 +33,8 @@ $_MODULE['<{internautenav}prestashop>internautenav_6e40cafd160180f83edfb5cdd288e
 $_MODULE['<{internautenav}prestashop>internautenav_ea91b27727fc288ef1dd33ab51e8384f'] = 'verified_at';
 $_MODULE['<{internautenav}prestashop>internautenav_481428a19732009990c4bac9de10dc37'] = 'Vérification d\'âge pour ce mode de livraison';
 $_MODULE['<{internautenav}prestashop>internautenav_1e8c192b93b08e816a1b9df13a66b5a0'] = 'Pour le mode de livraison sélectionné, une vérification d\'âge et d\'identité par MRZ est requise avant le paiement.';
-$_MODULE['<{internautenav}prestashop>internautenav_ced123c28ff6715c302676ffd917d7a9'] = 'Commencer la vérification MRZ';
-$_MODULE['<{internautenav}prestashop>internautenav_3c2e70ff78ce52edb12afc7a5c1b277f'] = 'Vérification MRZ réussie. Le paiement est débloqué.';
+$_MODULE['<{internautenav}prestashop>internautenav_ced123c28ff6715c302676ffd917d7a9'] = 'Démarrer la vérification d\'âge';
+$_MODULE['<{internautenav}prestashop>internautenav_3c2e70ff78ce52edb12afc7a5c1b277f'] = 'Vérification d\'âge réussie. Le paiement est débloqué.';
 $_MODULE['<{internautenav}prestashop>internautenav_45c6662501837c3083030260413f34df'] = 'Les champs de paiement restent verrouillés jusqu\'à la réception côté serveur d\'une vérification réussie.';
 $_MODULE['<{internautenav}prestashop>internautenav_448d315158bc82c3f64ceb007056fd0b'] = 'Vérification d\'age';
 $_MODULE['<{internautenav}prestashop>internautenav_c691329cd3e16f8d829813b5feb2b451'] = 'Fermer';

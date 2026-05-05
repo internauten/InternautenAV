@@ -33,8 +33,8 @@ $_MODULE['<{internautenav}prestashop>internautenav_6e40cafd160180f83edfb5cdd288e
 $_MODULE['<{internautenav}prestashop>internautenav_ea91b27727fc288ef1dd33ab51e8384f'] = 'verified_at';
 $_MODULE['<{internautenav}prestashop>internautenav_481428a19732009990c4bac9de10dc37'] = 'Age Verification for this Shipping Method';
 $_MODULE['<{internautenav}prestashop>internautenav_1e8c192b93b08e816a1b9df13a66b5a0'] = 'For the selected shipping method, age and identity verification via MRZ is required before payment.';
-$_MODULE['<{internautenav}prestashop>internautenav_ced123c28ff6715c302676ffd917d7a9'] = 'Start MRZ Verification';
-$_MODULE['<{internautenav}prestashop>internautenav_3c2e70ff78ce52edb12afc7a5c1b277f'] = 'MRZ verification completed successfully. Payment is unlocked.';
+$_MODULE['<{internautenav}prestashop>internautenav_ced123c28ff6715c302676ffd917d7a9'] = 'Start Age Verification';
+$_MODULE['<{internautenav}prestashop>internautenav_3c2e70ff78ce52edb12afc7a5c1b277f'] = 'Age verification completed successfully. Payment is unlocked.';
 $_MODULE['<{internautenav}prestashop>internautenav_45c6662501837c3083030260413f34df'] = 'Payment fields remain locked until successful verification is received server-side.';
 $_MODULE['<{internautenav}prestashop>internautenav_448d315158bc82c3f64ceb007056fd0b'] = 'Age Verification';
 $_MODULE['<{internautenav}prestashop>internautenav_c691329cd3e16f8d829813b5feb2b451'] = 'Close';
