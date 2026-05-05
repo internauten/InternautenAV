@@ -252,6 +252,7 @@
               maxlength="44"
             >
           </div>
+          <p class="internautenav-hint">{$internautenav_hint|escape:'htmlall':'UTF-8'}</p>
         </div>
 
         <div class="js-internautenav-doc-fields" data-doc-type="upload" hidden>
@@ -270,7 +271,6 @@
           </div>
         </div>
 
-        <p class="internautenav-hint">{$internautenav_hint|escape:'htmlall':'UTF-8'}</p>
         <p class="internautenav-modal-error js-internautenav-error" hidden></p>
 
         <div class="internautenav-modal-actions">
