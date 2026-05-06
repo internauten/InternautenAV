@@ -14,6 +14,7 @@ class Internautenav extends Module
 {
     public const CONF_REQUIRED_CARRIER_REFS = 'INTERNAUTENAV_REQUIRED_CARRIER_REFS';
     public const CONF_LAST_UPLOAD_CLEANUP_AT = 'INTERNAUTENAV_LAST_UPLOAD_CLEANUP_AT';
+    public const CONF_PRIVACY_CMS_ID = 'INTERNAUTENAV_PRIVACY_CMS_ID';
     public const DB_TABLE = 'internautenav_customer_verification';
     public const DB_LOG_TABLE = 'internautenav_verification_log';
     public const DB_UPLOAD_TABLE = 'internautenav_uploaded_documents';
@@ -25,7 +26,7 @@ class Internautenav extends Module
     {
         $this->name = 'internautenav';
         $this->tab = 'shipping_logistics';
-        $this->version = '1.1.2';
+        $this->version = '1.2.0';
         $this->author = 'die.internauten.ch';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -54,12 +55,14 @@ class Internautenav extends Module
             && $this->registerHook('displayAdminOrderTop')
             && $this->installDatabase()
             && Configuration::updateValue(self::CONF_REQUIRED_CARRIER_REFS, json_encode([]))
+            && Configuration::updateValue(self::CONF_PRIVACY_CMS_ID, '0')
             && Configuration::updateValue(self::CONF_LAST_UPLOAD_CLEANUP_AT, '0');
     }
 
     public function uninstall()
     {
         return Configuration::deleteByName(self::CONF_REQUIRED_CARRIER_REFS)
+            && Configuration::deleteByName(self::CONF_PRIVACY_CMS_ID)
             && Configuration::deleteByName(self::CONF_LAST_UPLOAD_CLEANUP_AT)
             && $this->uninstallDatabase()
             && parent::uninstall();
@@ -74,9 +77,14 @@ class Internautenav extends Module
             if (!is_array($selectedRefs)) {
                 $selectedRefs = [];
             }
+            $privacyCmsId = (int) Tools::getValue('INTERNAUTENAV_PRIVACY_CMS_ID', 0);
+            if ($privacyCmsId < 0) {
+                $privacyCmsId = 0;
+            }
 
             $selectedRefs = array_values(array_unique(array_map('intval', $selectedRefs)));
             Configuration::updateValue(self::CONF_REQUIRED_CARRIER_REFS, json_encode($selectedRefs));
+            Configuration::updateValue(self::CONF_PRIVACY_CMS_ID, (string) $privacyCmsId);
             $output .= $this->displayConfirmation($this->l('backoffice_settings_saved'));
         }
 
@@ -106,6 +114,19 @@ class Internautenav extends Module
         }
 
         $current = $this->getRequiredCarrierReferences();
+        $privacyCmsId = (int) Configuration::get(self::CONF_PRIVACY_CMS_ID);
+        $privacyCmsStatusClass = 'text-muted';
+        $privacyCmsStatusMessage = $this->l('Beispielseite aktiv (keine CMS-ID gesetzt).');
+        if ($privacyCmsId > 0) {
+            $privacyCms = new CMS($privacyCmsId, (int) $this->context->language->id);
+            if (Validate::isLoadedObject($privacyCms) && (int) $privacyCms->active === 1) {
+                $privacyCmsStatusClass = 'text-success';
+                $privacyCmsStatusMessage = sprintf($this->l('CMS-Seite #%d ist gueltig und aktiv.'), $privacyCmsId);
+            } else {
+                $privacyCmsStatusClass = 'text-danger';
+                $privacyCmsStatusMessage = sprintf($this->l('CMS-Seite #%d ist ungueltig oder inaktiv. Fallback auf Beispielseite.'), $privacyCmsId);
+            }
+        }
         $carriers = Carrier::getCarriers(
             (int) $this->context->language->id,
             true,
@@ -145,6 +166,23 @@ class Internautenav extends Module
 
         $output .= '</select>';
         $output .= '<p class="help-block">' . $this->l('backoffice_help') . '</p>';
+        $output .= '</div>';
+        $cmsPages = CMS::listCms((int) $this->context->language->id, false, true);
+        if (!is_array($cmsPages)) {
+            $cmsPages = [];
+        }
+        $output .= '<div class="form-group">';
+        $output .= '<label>' . $this->l('Datenschutzerklaerung (CMS-Seite)') . '</label>';
+        $output .= '<select name="INTERNAUTENAV_PRIVACY_CMS_ID" class="form-control">';
+        $output .= '<option value="0"' . ($privacyCmsId === 0 ? ' selected' : '') . '>— ' . $this->l('Modul-Beispielseite verwenden') . ' —</option>';
+        foreach ($cmsPages as $cmsPage) {
+            $cmsPageId = (int) $cmsPage['id_cms'];
+            $cmsPageTitle = htmlspecialchars((string) $cmsPage['meta_title'], ENT_QUOTES, 'UTF-8');
+            $sel = ($privacyCmsId === $cmsPageId) ? ' selected' : '';
+            $output .= '<option value="' . $cmsPageId . '"' . $sel . '>#' . $cmsPageId . ' – ' . $cmsPageTitle . '</option>';
+        }
+        $output .= '</select>';
+        $output .= '<p class="help-block"><strong>' . $this->l('Status') . ':</strong> <span class="' . $privacyCmsStatusClass . '">' . htmlspecialchars($privacyCmsStatusMessage, ENT_QUOTES, 'UTF-8') . '</span></p>';
         $output .= '</div>';
         $output .= '<button type="submit" name="submitInternautenavConfig" class="btn btn-primary">' . $this->l('backoffice_save_button') . '</button>';
         $output .= '</form>';
@@ -391,11 +429,16 @@ class Internautenav extends Module
         }
 
         $isVerified = $this->isAlreadyVerifiedForCheckout();
+        $privacyLinkData = $this->getPrivacyPageLinkData();
 
         $this->context->smarty->assign([
             'internautenav_carrier_id' => $carrier['id'],
             'internautenav_carrier_name' => $carrier['name'],
             'internautenav_is_verified' => $isVerified,
+            'internautenav_privacy_url' => $privacyLinkData['url'],
+            'internautenav_privacy_label' => $this->l('Datenschutzerklaerung'),
+            'internautenav_privacy_is_example' => $privacyLinkData['is_example'],
+            'internautenav_privacy_example_hint' => $this->l('Aktuell wird die Modul-Beispielseite verwendet. Die finale Datenschutzerklaerung bitte als CMS-Seite hinterlegen.'),
             'internautenav_line3_prefill' => $this->getDeliveryAddressMrzLine3Prefill(),
             'internautenav_pass_line1_prefill' => $this->getDeliveryAddressSwissPassLine1Prefill(),
             'internautenav_customer_sex' => $this->getCustomerMrzSex(),
@@ -424,6 +467,32 @@ class Internautenav extends Module
         ]);
 
         return $this->display(__FILE__, 'views/templates/hook/payment_gate.tpl');
+    }
+
+    private function getPrivacyPageLinkData()
+    {
+        $fallbackUrl = $this->context->link->getModuleLink($this->name, 'privacy');
+        $configuredCmsId = (int) Configuration::get(self::CONF_PRIVACY_CMS_ID);
+
+        if ($configuredCmsId <= 0) {
+            return [
+                'url' => $fallbackUrl,
+                'is_example' => true,
+            ];
+        }
+
+        $cms = new CMS($configuredCmsId, (int) $this->context->language->id);
+        if (!Validate::isLoadedObject($cms) || !$cms->active) {
+            return [
+                'url' => $fallbackUrl,
+                'is_example' => true,
+            ];
+        }
+
+        return [
+            'url' => $this->context->link->getCMSLink($cms),
+            'is_example' => false,
+        ];
     }
 
     public function getDeliveryAddressMrzLine3Prefill()

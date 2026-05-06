@@ -21,6 +21,7 @@ Modul zur Alters- und Identitätsprüfung für ausgewählte Versandarten via MRZ
 - Status-Badge oben auf der Bestellseite zeigt den aktuellen Prüfungsstatus auf einen Blick
 - DSGVO-konformer Upload-Retention-Cleanup (90 Tage Aufbewahrung)
 - Automatischer GitHub-Release bei Tag-Push (`vX.Y.Z`) inkl. ZIP-Artefakt aus `internautenav/`
+- Datenschutzerklärung im Checkout verknüpfbar: konfigurierbare CMS-Seite mit Fallback auf Modul-Beispielseite
 
 ## GitHub Release Automation
 
@@ -49,8 +50,52 @@ git push origin v1.0.0
 1. Ordner `internautenav` in den PrestaShop-Ordner `modules/` kopieren.
 2. Modul im Backoffice installieren.
 3. Unter Modul-Konfiguration die Versandarten auswählen, die Altersverifikation erfordern.
+4. Optional: Datenschutzerklärung als CMS-Seite hinterlegen (siehe unten).
 
 ## DSGVO Upload-Cleanup / Cron
+
+## Datenschutzerklärung im Checkout
+
+Im Checkout-Formular wird ein Link zur Datenschutzerklärung angezeigt. Dieser Link kann im Modul-Backend konfiguriert werden.
+
+### Konfiguration (Backoffice)
+
+Im Backoffice unter **Module → Internautenav AV → Konfiguration** findest du das Dropdown **„Datenschutzerklärung (CMS-Seite)"**:
+
+| Auswahl                           | Verhalten                                               |
+| --------------------------------- | ------------------------------------------------------- |
+| — Modul-Beispielseite verwenden — | Link zeigt auf die integrierte Beispielseite des Moduls |
+| CMS-Seite #ID – Titel             | Link zeigt direkt auf die gewählte PrestaShop CMS-Seite |
+
+Unterhalb des Dropdowns wird ein **Statusindikator** eingeblendet:
+
+| Farbe | Bedeutung                                                          |
+| ----- | ------------------------------------------------------------------ |
+| grün  | CMS-Seite gültig und aktiv                                         |
+| rot   | CMS-Seite nicht gefunden oder inaktiv – Fallback auf Beispielseite |
+| grau  | Keine CMS-Seite gewählt – Beispielseite aktiv                      |
+
+### Beispielseite (Entwicklung / Platzhalter)
+
+Das Modul enthält eine integrierte Beispiel-Datenschutzseite unter:
+
+```
+modules/internautenav/views/templates/front/privacy.tpl
+```
+
+Sie ist über den Modul-Frontcontroller erreichbar:
+
+```
+https://shop.example.com/module/internautenav/privacy
+```
+
+Die Seite dient nur als Platzhalter für die Entwicklung. Für den Produktivbetrieb bitte eine eigene CMS-Seite im PrestaShop-Backend anlegen und dort im Modul verknüpfen.
+
+### Umstellung auf CMS-Seite
+
+1. Im PrestaShop-Backend unter **Design → Seiten** eine neue CMS-Seite mit der finalen Datenschutzerklärung anlegen.
+2. Im Modul-Backend die neue CMS-Seite im Dropdown auswählen.
+3. Speichern – der Statusindikator wechselt auf grün, der Checkout-Link zeigt ab sofort auf die CMS-Seite.
 
 Hochgeladene Dokumente werden nach **90 Tagen** automatisch gelöscht. Der Cleanup-Mechanismus läuft auf zwei Wegen:
 

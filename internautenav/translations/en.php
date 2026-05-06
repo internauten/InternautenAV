@@ -1,10 +1,9 @@
 <?php
 
 global $_MODULE;
-$_MODULE['<{internautenav}prestashop>internautenav_81834431849f4042446b7c19e12e8746'] = 'Front of passport';
+$_MODULE = array();
 
-$_MODULE['<{internautenav}prestashop>internautenav_a5ffbe10bf416c7db8773f0ed801a022'] = 'Internauten AV';
-$_MODULE['<{internautenav}prestashop>internautenav_62e5cde27ad49944de104bbe346fd8e8'] = 'MRZ verification for selected shipping methods (CH ID, CH Pass, EU Pass).';
+$_MODULE['<{internautenav}prestashop>internautenav_81834431849f4042446b7c19e12e8746'] = 'Front of passport';
 $_MODULE['<{internautenav}prestashop>internautenav_8772abeeb22a696d9439488aea151b30'] = 'Settings saved.';
 $_MODULE['<{internautenav}prestashop>internautenav_791da7ecc6ea9308043f5cff02ae7a57'] = 'MRZ Verification by Shipping Method';
 $_MODULE['<{internautenav}prestashop>internautenav_f904a95613f2b63674e0e3990224bd75'] = 'Select the shipping methods for which MRZ verification should be enforced at checkout.';
@@ -54,15 +53,12 @@ $_MODULE['<{internautenav}prestashop>internautenav_c5a14f3a639b8c02437f66ee64737
 $_MODULE['<{internautenav}prestashop>internautenav_713c2cd1033c540b3a7d6c6402470316'] = 'Delivery address could not be loaded.';
 $_MODULE['<{internautenav}prestashop>internautenav_19c37bf873a1374d8ff585c2e71bc8fa'] = 'Name and first name of delivery address do not match the MRZ.';
 $_MODULE['<{internautenav}prestashop>internautenav_17b072d005eef757b74408b185055f31'] = 'Orders only for adults (18+).';
-$_MODULE['<{internautenav}prestashop>internautenav_aa8581a5f308de1729fac7ee4405cc0b'] = 'Verification is currently unavailable. Please try again.';
 $_MODULE['<{internautenav}prestashop>internautenav_4b1b5751f62dfce90d3afcdfa31f9221'] = 'Internauten AV';
-$_MODULE['<{internautenav}prestashop>internautenav_a08aeb86736558f29ad326fe2664dd71'] = 'MRZ verification for selected shipping methods (CH ID, CH Pass, EU Pass).';
 $_MODULE['<{internautenav}prestashop>internautenav_e9b93268b4c838702220c7c939778f2e'] = 'Verification status could not be saved.';
 $_MODULE['<{internautenav}prestashop>internautenav_8774f43079b162159ad6e9d9b6deb13b'] = 'Please select document type.';
 $_MODULE['<{internautenav}prestashop>internautenav_6b2fce74c9562749070ef0445341eb66'] = 'Delivery address could not be loaded.';
 $_MODULE['<{internautenav}prestashop>internautenav_dc8b31613c557c6d9d125b8406d3d9ca'] = 'Name and first name of delivery address do not match the MRZ.';
 $_MODULE['<{internautenav}prestashop>internautenav_92f8f8106ab0a1fc895786924d69ab7c'] = 'Orders only for adults (18+).';
-
 $_MODULE['<{internautenav}prestashop>ajax_1e8c192b93b08e816a1b9df13a66b5a0'] = 'For the selected shipping method, age and identity verification via MRZ is required before payment.';
 $_MODULE['<{internautenav}prestashop>ajax_287406fe9a6e57317fc5a5795e6f2900'] = 'Document Type';
 $_MODULE['<{internautenav}prestashop>ajax_12309f0fc1ad868231073aef2aa31ab9'] = 'Swiss ID';
@@ -72,23 +68,28 @@ $_MODULE['<{internautenav}prestashop>ajax_c8afc51d042bea02c016d50f701cf52f'] = '
 $_MODULE['<{internautenav}prestashop>ajax_ba42beea11a66e21bc73f4b953e82548'] = 'MRZ Line 2';
 $_MODULE['<{internautenav}prestashop>ajax_3295794b75985b99452e318bbbb12036'] = 'MRZ Line 3 (CH ID only)';
 $_MODULE['<{internautenav}prestashop>ajax_4086ac267cc51dcffd8581677232ee9c'] = 'Please enter lines exactly as in the document.';
-
-// Upload-Panel + Status-Badges
-$_MODULE['<{internautenav}prestashop>internautenav_1f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Age Verification - Uploaded Documents';
-$_MODULE['<{internautenav}prestashop>internautenav_2f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'No uploaded documents for this order.';
-$_MODULE['<{internautenav}prestashop>internautenav_3f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Original Filename';
-$_MODULE['<{internautenav}prestashop>internautenav_4f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Action';
-$_MODULE['<{internautenav}prestashop>internautenav_5f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Download';
-$_MODULE['<{internautenav}prestashop>internautenav_6f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Manual Verification Decision:';
-$_MODULE['<{internautenav}prestashop>internautenav_7f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Verification Passed';
-$_MODULE['<{internautenav}prestashop>internautenav_8f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Verification Rejected';
-$_MODULE['<{internautenav}prestashop>internautenav_9f2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Deletes all documents GDPR-compliant immediately.';
-$_MODULE['<{internautenav}prestashop>internautenav_af2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Verification Automatically Passed';
-$_MODULE['<{internautenav}prestashop>internautenav_bf2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Verification to be Done Manually';
-$_MODULE['<{internautenav}prestashop>internautenav_cf2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Verification Manually Passed';
-$_MODULE['<{internautenav}prestashop>internautenav_df2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'No Verification Available';
-$_MODULE['<{internautenav}prestashop>internautenav_ef2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Verification Upon Delivery';
-$_MODULE['<{internautenav}prestashop>internautenav_ff2e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'This shipping method does not require online age verification.';
-$_MODULE['<{internautenav}prestashop>internautenav_fa1e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'No verification record found for this order.';
-$_MODULE['<{internautenav}prestashop>internautenav_fb1e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = '%d document(s) uploaded, not yet verified.';
-$_MODULE['<{internautenav}prestashop>internautenav_fc1e3d4c5b6a7e8f9d0c1b2a3f4e5d6c'] = 'Manual';
+$_MODULE['<{internautenav}prestashop>internautenav_74f5c369e1e3a489d90b1035a2d040b2'] = 'Age Verification - Uploaded Documents';
+$_MODULE['<{internautenav}prestashop>internautenav_a5fb3312c6a2ed6a4d6afd1a43b5dbd8'] = 'No uploaded documents for this order.';
+$_MODULE['<{internautenav}prestashop>internautenav_58c971051e9e804fbb9f17114ab70724'] = 'Original Filename';
+$_MODULE['<{internautenav}prestashop>internautenav_e6c7a581df1244f057a480657958cf22'] = 'Action';
+$_MODULE['<{internautenav}prestashop>internautenav_438d90e7cf4d86f212bbac896c47a8f5'] = 'Privacy Policy (CMS Page)';
+$_MODULE['<{internautenav}prestashop>internautenav_1549534a2f16fc8f4afd6dd904b8f45c'] = 'Use module example page';
+$_MODULE['<{internautenav}prestashop>internautenav_25f0374a90b2494f257a7b6f876b7a57'] = 'Example page active (no CMS page configured).';
+$_MODULE['<{internautenav}prestashop>internautenav_e27271943193580ad5e8c623b5755dd3'] = 'CMS page #%d is valid and active.';
+$_MODULE['<{internautenav}prestashop>internautenav_cfdd9e31254edd1e0c813e25b561561d'] = 'CMS page #%d is invalid or inactive. Falling back to example page.';
+$_MODULE['<{internautenav}prestashop>internautenav_ec53a8c4f07baed5d8825072c89799be'] = 'Status';
+$_MODULE['<{internautenav}prestashop>internautenav_1c06df32a27d0da2f262bc9d4f4e6908'] = 'Privacy Policy';
+$_MODULE['<{internautenav}prestashop>internautenav_f4cc9360d7c2c1cd6a7e10e6c585cdc6'] = 'Currently using the module example page. Please add the final privacy policy as a CMS page.';
+$_MODULE['<{internautenav}prestashop>privacy_8481b1021c4468927c82b488c0f280c2'] = 'Privacy Policy (Example)';
+$_MODULE['<{internautenav}prestashop>internautenav_9753514844982210cc6647fe88367d16'] = 'Manual Verification Decision:';
+$_MODULE['<{internautenav}prestashop>internautenav_e2fc39e61546337320044417e8a434b5'] = 'Verification Passed';
+$_MODULE['<{internautenav}prestashop>internautenav_f598aaba3589c9c57d592cad4fdc51d6'] = 'Verification Rejected';
+$_MODULE['<{internautenav}prestashop>internautenav_beb1adde5eaff64174c2cd3bfba2e383'] = 'Deletes all documents GDPR-compliant immediately.';
+$_MODULE['<{internautenav}prestashop>internautenav_d24c60b04691da2cdb3d8d6cf0e221b3'] = 'Verification Automatically Passed';
+$_MODULE['<{internautenav}prestashop>internautenav_2260da73201dc7d8acd93d424bbeec31'] = 'Verification to be Done Manually';
+$_MODULE['<{internautenav}prestashop>internautenav_752003355004b0bba8ca08668b663c52'] = 'Verification Manually Passed';
+$_MODULE['<{internautenav}prestashop>internautenav_ec3a3932966065b172107bad1607b0e2'] = 'No Verification Available';
+$_MODULE['<{internautenav}prestashop>internautenav_c219b01ba56f7e7bab786c8aa922bf1a'] = 'Verification Upon Delivery';
+$_MODULE['<{internautenav}prestashop>internautenav_2202258d8e169a95c82dc52df11fbc3d'] = 'This shipping method does not require online age verification.';
+$_MODULE['<{internautenav}prestashop>internautenav_17cb4bb31e4b77f2c13ad6a74a3ec0f7'] = 'No verification record found for this order.';
+$_MODULE['<{internautenav}prestashop>internautenav_bbe3b28910489de49bf6fb68bbff76dc'] = '%d document(s) uploaded, not yet verified.';

@@ -10,6 +10,16 @@
       <strong>{$internautenav_carrier_name|escape:'htmlall':'UTF-8'}</strong>
     </p>
 
+    <p class="internautenav-payment-privacy-note">
+      <a href="{$internautenav_privacy_url|escape:'htmlall':'UTF-8'}" target="_blank" rel="noopener noreferrer">
+        {$internautenav_privacy_label|escape:'htmlall':'UTF-8'}
+      </a>
+      {if $internautenav_privacy_is_example}
+        <br>
+        <small>{$internautenav_privacy_example_hint|escape:'htmlall':'UTF-8'}</small>
+      {/if}
+    </p>
+
     <p class="internautenav-payment-lock-note js-internautenav-lock-note" {if $internautenav_is_verified}style="display:none;"{/if}>
       {$internautenav_payment_locked|escape:'htmlall':'UTF-8'}
     </p>
