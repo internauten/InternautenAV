@@ -193,7 +193,7 @@ Beide Aktionen sind token-gesichert und erfordern eine Bestätigung via Browser-
 
 Damit die Container bei jedem neuen Modul nicht jedesmal neu erstellt werden müssen, versuchen wir es mit Symlinks.
 
-Voraussetzungen: im Compose hat es unter volumes einen Eintrag `- /home/dmo/internauten:/internauten`
+Voraussetzungen: im Compose hat es unter volumes einen Eintrag `- /home/youruser/internauten:/internauten`
 
 1. Bash ins WSL2 und holen des Repos aus dem Fork:
    ```bash
