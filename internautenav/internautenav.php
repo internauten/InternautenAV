@@ -26,7 +26,7 @@ class Internautenav extends Module
     {
         $this->name = 'internautenav';
         $this->tab = 'shipping_logistics';
-        $this->version = '1.2.0';
+        $this->version = '1.3.0';
         $this->author = 'die.internauten.ch';
         $this->need_instance = 0;
         $this->bootstrap = true;
