@@ -201,12 +201,19 @@ Voraussetzungen: im Compose hat es unter volumes einen Eintrag `- /home/youruser
    git clone https://github.com/yourgithub/InternautenAV.git
    ```
 2. Owner, Group und Rights setzen:
+
    ```bash
    sudo chmod -R g+s .
    sudo chgrp -R www-data .
    sudo setfacl -R -d -m g:www-data:rwx .
    sudo setfacl -R -m g:www-data:rwx .
+
+   oder
+
+   cd ~/internauten/InternautenAV/internautenav/controllers
+   sudo chown -R www-data:www-data .
    ```
+
 3. Bash in den Container und Symlink erstellen:
    ```bash
    ln -s /internauten/InternautenAV/internautenav /var/www/html/modules/internautenav

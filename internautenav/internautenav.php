@@ -39,6 +39,16 @@ class Internautenav extends Module
             'min' => '1.7.8.0',
             'max' => _PS_VERSION_,
         ];
+
+        if ((int) $this->id > 0 && !$this->isRegisteredInHook('displayAdminCustomers')) {
+            $this->registerHook('displayAdminCustomers');
+        }
+        if ((int) $this->id > 0 && !$this->isRegisteredInHook('displayPDFInvoice')) {
+            $this->registerHook('displayPDFInvoice');
+        }
+        if ((int) $this->id > 0 && !$this->isRegisteredInHook('displayPDFDeliverySlip')) {
+            $this->registerHook('displayPDFDeliverySlip');
+        }
     }
 
     public function install()
@@ -46,11 +56,14 @@ class Internautenav extends Module
         return parent::install()
             && $this->registerHook('actionFrontControllerSetMedia')
             && $this->registerHook('displayPaymentTop')
+            && $this->registerHook('displayCustomerAccount')
+            && $this->registerHook('displayAdminCustomers')
+            && $this->registerHook('displayPDFInvoice')
+            && $this->registerHook('displayPDFDeliverySlip')
             && $this->registerHook('actionCarrierProcess')
             && $this->registerHook('actionValidateStepComplete')
             && $this->registerHook('actionValidateOrder')
             && $this->registerHook('displayAdminOrderMainBottom')
-            && $this->registerHook('displayAdminOrder')
             && $this->registerHook('actionCronJob')
             && $this->registerHook('displayAdminOrderTop')
             && $this->installDatabase()
@@ -375,6 +388,13 @@ class Internautenav extends Module
     {
         $this->runUploadRetentionCleanup(false);
 
+        if (!$this->isRegisteredInHook('displayCustomerAccount')) {
+            $this->registerHook('displayCustomerAccount');
+        }
+        if (!$this->isRegisteredInHook('displayAdminCustomers')) {
+            $this->registerHook('displayAdminCustomers');
+        }
+
         if ($this->context->controller->php_self !== 'order') {
             return;
         }
@@ -387,9 +407,6 @@ class Internautenav extends Module
         }
         if (!$this->isRegisteredInHook('displayAdminOrderMainBottom')) {
             $this->registerHook('displayAdminOrderMainBottom');
-        }
-        if (!$this->isRegisteredInHook('displayAdminOrder')) {
-            $this->registerHook('displayAdminOrder');
         }
 
         Media::addJsDef([
@@ -808,11 +825,249 @@ class Internautenav extends Module
         );
     }
 
+    public function hookDisplayPDFInvoice($params)
+    {
+        return $this->renderOrderStatusBadgeForPdf($params);
+    }
+
+    public function hookDisplayPDFDeliverySlip($params)
+    {
+        return $this->renderOrderStatusBadgeForPdf($params);
+    }
+
+    private function renderOrderStatusBadgeForPdf($params)
+    {
+        $object = isset($params['object']) ? $params['object'] : null;
+        $order = $this->resolveOrderFromPdfObject($object);
+        if (!Validate::isLoadedObject($order)) {
+            return '';
+        }
+
+        $badgeHtml = $this->hookDisplayAdminOrderTop([
+            'id_order' => (int) $order->id,
+            'order' => $order,
+        ]);
+
+        if ($badgeHtml === '') {
+            return '';
+        }
+
+        // Unknown status should not be shown in PDF.
+        if (strpos($badgeHtml, '&#63;') !== false) {
+            return '';
+        }
+
+        // PDF fonts may not contain glyphs for icon entities; use ASCII-safe labels.
+        $badgeHtml = str_replace(
+            ['&#10003;', '&#10007;', '&#63;', '&#9888;', '&#128666;'],
+            ['BESTANDEN!', 'ABGELEHNT!', 'UNBEKANNT!', 'HINWEIS!', 'HINWEIS'],
+            $badgeHtml
+        );
+
+        return '<div style="margin:8px 0 10px;">' . $badgeHtml . '</div>';
+    }
+
+    private function resolveOrderFromPdfObject($object)
+    {
+        if (Validate::isLoadedObject($object) && $object instanceof Order) {
+            return $object;
+        }
+
+        $idOrder = 0;
+        if (is_object($object) && isset($object->id_order)) {
+            $idOrder = (int) $object->id_order;
+        }
+
+        if ($idOrder <= 0) {
+            return null;
+        }
+
+        $order = new Order($idOrder);
+        if (!Validate::isLoadedObject($order)) {
+            return null;
+        }
+
+        return $order;
+    }
+
+    public function hookDisplayCustomerAccount($params)
+    {
+        if (!Validate::isLoadedObject($this->context->customer) || !$this->context->customer->isLogged()) {
+            return '';
+        }
+
+        $url = $this->context->link->getModuleLink($this->name, 'protocol', [], true);
+
+        return '<a class="account-menu__link " href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '" title="' . htmlspecialchars($this->l('Alterspruefungsprotokoll'), ENT_QUOTES, 'UTF-8') . '">'
+            . '<span class="link-item">'
+            . '<i class="material-icons">assignment</i>'
+            . '<span>' . htmlspecialchars($this->l('Alterspruefungsprotokoll'), ENT_QUOTES, 'UTF-8') . '</span>'
+            . '</span>'
+            . '</a>';
+    }
+
+    public function hookDisplayAdminCustomers($params)
+    {
+        $idCustomer = isset($params['id_customer']) ? (int) $params['id_customer'] : 0;
+        if ($idCustomer <= 0) {
+            return '';
+        }
+
+        $rows = $this->getCustomerVerificationProtocol($idCustomer, 200);
+
+        $output = '<div class="card mt-2">';
+        $output .= '<h3 class="card-header">' . htmlspecialchars($this->l('Alterspruefungsprotokoll', 'protocol'), ENT_QUOTES, 'UTF-8') . '</h3>';
+        $output .= '<div class="card-body">';
+
+        if (empty($rows)) {
+            $output .= '<p class="text-muted mb-0">' . htmlspecialchars($this->l('Keine Eintraege.'), ENT_QUOTES, 'UTF-8') . '</p>';
+            $output .= '</div></div>';
+
+            return $output;
+        }
+
+        $output .= '<div class="table-responsive">';
+        $output .= '<table class="table table-striped table-bordered">';
+        $output .= '<thead><tr>';
+        $output .= '<th>' . htmlspecialchars($this->l('Zeitpunkt'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '<th>' . htmlspecialchars($this->l('id_cart'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '<th>' . htmlspecialchars($this->l('Dokumenttyp'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '<th>' . htmlspecialchars($this->l('Ergebnis'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '<th>' . htmlspecialchars($this->l('Meldung'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '</tr></thead><tbody>';
+
+        foreach ($rows as $row) {
+            $message = (string) ($row['result_message'] ?? '');
+            $isOk = (int) ($row['result'] ?? 0) === 1;
+            $docType = (string) ($row['doc_type'] ?? '');
+            if (strpos($message, 'Manuelle Prüfung') !== false) {
+                $docType = 'Manuell';
+            } elseif ($docType !== '') {
+                $docType = ucfirst($docType);
+            }
+
+            $resultLabel = $isOk
+                ? '&#10003; ' . htmlspecialchars($this->l('OK'), ENT_QUOTES, 'UTF-8')
+                : '&#10007; ' . htmlspecialchars($this->l('Fehler'), ENT_QUOTES, 'UTF-8');
+
+            $output .= '<tr>';
+            $output .= '<td>' . htmlspecialchars((string) ($row['checked_at'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
+            $output .= '<td>' . htmlspecialchars((string) ($row['id_cart'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
+            $output .= '<td>' . htmlspecialchars($docType, ENT_QUOTES, 'UTF-8') . '</td>';
+            $output .= '<td>' . $resultLabel . '</td>';
+            $output .= '<td>' . htmlspecialchars($message, ENT_QUOTES, 'UTF-8') . '</td>';
+            $output .= '</tr>';
+        }
+
+        $output .= '</tbody></table>';
+        $output .= '</div>';
+        $output .= '</div>';
+        $output .= '</div>';
+
+        return $output;
+    }
+
+    private function renderOrderVerificationLogPanel($idOrder, Order $order)
+    {
+        if ($idOrder <= 0 || !$this->ensureVerificationLogTable()) {
+            return '';
+        }
+
+        $idCart = (int) $order->id_cart;
+        if ($idCart <= 0) {
+            return '';
+        }
+
+        $logRows = Db::getInstance()->executeS(
+            'SELECT `result`, `result_message`, `doc_type`, `checked_at`
+             FROM `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '`
+             WHERE id_cart = ' . $idCart . '
+             ORDER BY checked_at DESC'
+        );
+        if (!is_array($logRows) || empty($logRows)) {
+            $output = '<div class="card mt-2">';
+            $output .= '<div class="card-header">';
+            $output .= '<h3>' . htmlspecialchars($this->l('Altersprüfung – Protokoll'), ENT_QUOTES, 'UTF-8') . '</h3>';
+            $output .= '</div>';
+            $output .= '<div class="card-body">';
+            $output .= '<p class="text-muted">' . htmlspecialchars($this->l('Keine Eintraege.'), ENT_QUOTES, 'UTF-8') . '</p>';
+            $output .= '</div>';
+            $output .= '</div>';
+
+            return $output;
+        }
+
+        $output = '<div class="card mt-2">';
+        $output .= '<div class="card-header">';
+        $output .= '<h3>' . htmlspecialchars($this->l('Altersprüfung – Protokoll'), ENT_QUOTES, 'UTF-8') . '</h3>';
+        $output .= '</div>';
+        $output .= '<div class="card-body">';
+        $output .= '<div class="table-responsive">';
+        $output .= '<table class="table table-hover">';
+        $output .= '<thead><tr>';
+        $output .= '<th>' . htmlspecialchars($this->l('Zeitpunkt'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '<th>' . htmlspecialchars($this->l('Dokumenttyp'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '<th>' . htmlspecialchars($this->l('Ergebnis'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '<th>' . htmlspecialchars($this->l('Meldung'), ENT_QUOTES, 'UTF-8') . '</th>';
+        $output .= '</tr></thead><tbody>';
+
+        foreach ($logRows as $row) {
+            $isOk = (int) ($row['result'] ?? 0) === 1;
+            $resultLabel = $isOk
+                ? '&#10003; ' . htmlspecialchars($this->l('OK'), ENT_QUOTES, 'UTF-8')
+                : '&#10007; ' . htmlspecialchars($this->l('Fehler'), ENT_QUOTES, 'UTF-8');
+            $docType = (string) ($row['doc_type'] ?? '');
+            if (strpos((string) ($row['result_message'] ?? ''), 'Manuelle Prüfung') !== false) {
+                $docType = 'Manuell';
+            } elseif ($docType !== '') {
+                $docType = ucfirst($docType);
+            }
+
+            $output .= '<tr>';
+            $output .= '<td>' . htmlspecialchars((string) ($row['checked_at'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
+            $output .= '<td>' . htmlspecialchars($docType, ENT_QUOTES, 'UTF-8') . '</td>';
+            $output .= '<td>' . $resultLabel . '</td>';
+            $output .= '<td>' . htmlspecialchars((string) ($row['result_message'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
+            $output .= '</tr>';
+        }
+
+        $output .= '</tbody></table>';
+        $output .= '</div>';
+        $output .= '</div>';
+        $output .= '</div>';
+
+        return $output;
+    }
+
+    public function getCustomerVerificationProtocol($idCustomer, $limit = 100)
+    {
+        $idCustomer = (int) $idCustomer;
+        $limit = (int) $limit;
+
+        if ($idCustomer <= 0 || $limit <= 0 || !$this->ensureVerificationLogTable()) {
+            return [];
+        }
+
+        if ($limit > 200) {
+            $limit = 200;
+        }
+
+        $rows = Db::getInstance()->executeS(
+            'SELECT `id_cart`, `doc_type`, `result`, `result_message`, `checked_at`
+             FROM `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '`
+             WHERE `id_customer` = ' . $idCustomer . '
+             ORDER BY `checked_at` DESC
+             LIMIT ' . $limit
+        );
+
+        return is_array($rows) ? $rows : [];
+    }
+
     private function renderOrderStatusBadge($type, $label, $detail)
     {
         $colors = [
             'success' => '#3c763d',
-            'warning' => '#8a6d3b',
+            'warning' => '#f01212',
             'danger'  => '#a94442',
             'info'    => '#31708f',
             'default' => '#555',
@@ -856,6 +1111,12 @@ class Internautenav extends Module
             return '';
         }
 
+        $protocolPanel = '';
+        $order = new Order($idOrder);
+        if (Validate::isLoadedObject($order)) {
+            $protocolPanel = $this->renderOrderVerificationLogPanel($idOrder, $order);
+        }
+
         $rows = $this->getUploadedDocumentsByOrder($idOrder);
 
         $output = '<div class="card mt-2">';
@@ -870,7 +1131,7 @@ class Internautenav extends Module
                 . '</p>';
             $output .= '</div></div>';
 
-            return $output;
+            return $protocolPanel . $output;
         }
 
         $output .= '<div class="table-responsive">';
@@ -958,12 +1219,7 @@ function internautenavAdminAction(action, orderId, token, ajaxUrl) {
 
         $output .= '</div>';
 
-        return $output;
-    }
-
-    public function hookDisplayAdminOrder($params)
-    {
-        return $this->hookDisplayAdminOrderMainBottom($params);
+        return $protocolPanel . $output;
     }
 
     public function validateMrzForCarrier($carrierId, array $payload, $persistOnSuccess = false)
