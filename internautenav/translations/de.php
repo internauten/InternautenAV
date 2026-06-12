@@ -50,7 +50,7 @@ $_MODULE['<{internautenav}prestashop>internautenav_7be2338eb588ffbc0d37c1db7c1bb
 $_MODULE['<{internautenav}prestashop>internautenav_d5abd4b179e3b8155bd1eca93bc49186'] = 'Taeglicher Aufruf empfohlen, z.B. via wget oder curl.';
 $_MODULE['<{internautenav}prestashop>internautenav_512d3e05d44b9573da0341f3c2228f38'] = 'Cleanup jetzt ausfuehren';
 $_MODULE['<{internautenav}prestashop>internautenav_c5861e142c5e00686fb54d0ff67ac122'] = 'Loescht alle Uploads aelter als %d Tage.';
-$_MODULE['<{internautenav}prestashop>internautenav_1c06df32a27d0da2f262bc9d4f4e6908'] = 'Datenschutzerklaerung';
+$_MODULE['<{internautenav}prestashop>internautenav_1c06df32a27d0da2f262bc9d4f4e6908'] = 'Details in der Datenschutzerklaerung';
 $_MODULE['<{internautenav}prestashop>internautenav_f4cc9360d7c2c1cd6a7e10e6c585cdc6'] = 'Aktuell wird die Modul-Beispielseite verwendet. Die finale Datenschutzerklaerung bitte als CMS-Seite hinterlegen.';
 $_MODULE['<{internautenav}prestashop>internautenav_481428a19732009990c4bac9de10dc37'] = 'Altersprüfung fuer diese Versandart';
 $_MODULE['<{internautenav}prestashop>internautenav_1e8c192b93b08e816a1b9df13a66b5a0'] = 'Fuer die gewaehlte Versandart ist vor der Zahlung eine Alters- und Identitaetsprüfung erforderlich.';
@@ -64,6 +64,7 @@ $_MODULE['<{internautenav}prestashop>internautenav_287406fe9a6e57317fc5a5795e6f2
 $_MODULE['<{internautenav}prestashop>internautenav_12309f0fc1ad868231073aef2aa31ab9'] = 'Schweizer ID';
 $_MODULE['<{internautenav}prestashop>internautenav_083559e45e69f446341bde604c601818'] = 'Schweizer Pass';
 $_MODULE['<{internautenav}prestashop>internautenav_bb60cfb540fd0525cf15dfe0afd27505'] = 'EU Pass';
+$_MODULE['<{internautenav}prestashop>internautenav_91412465ea9169dfd901dd5e7c96dd99'] = 'Anderes Dokument (Upload)';
 $_MODULE['<{internautenav}prestashop>internautenav_f57f1c760872c0bd4ce7a17f73b8fd8e'] = 'Wie Rückseite der Schweizer ID';
 $_MODULE['<{internautenav}prestashop>internautenav_81834431849f4042446b7c19e12e8746'] = 'Vorderseite Reisepass';
 $_MODULE['<{internautenav}prestashop>internautenav_c8afc51d042bea02c016d50f701cf52f'] = 'MRZ Zeile 1';
