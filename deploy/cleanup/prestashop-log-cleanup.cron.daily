@@ -2,4 +2,4 @@
 # Wrapper fuer /etc/cron.daily: datierte PrestaShop-Logs bereinigen.
 set -euo pipefail
 
-/usr/local/sbin/prestashop-dated-logs-cleanup /var/www/wow9.internaut.ch/html/var/logs 30
+/usr/local/sbin/prestashop-dated-logs-cleanup /path/to/prestashop/var/logs 30

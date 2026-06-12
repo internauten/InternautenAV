@@ -4,7 +4,7 @@
 set -euo pipefail
 
 TARGET=/etc/logrotate.d/internautenav-cron
-LOGDIR=/var/www/wow9.internaut.ch/html/var/logs
+LOGDIR=/path/to/prestashop/var/logs
 CONF="$(cd "$(dirname "$0")" && pwd)/logrotate/internautenav-cron"
 CLEANUP_SRC="$(cd "$(dirname "$0")" && pwd)/cleanup/prestashop-dated-logs-cleanup.sh"
 CLEANUP_DST=/usr/local/sbin/prestashop-dated-logs-cleanup
@@ -43,9 +43,10 @@ echo "Cron-Daily-Wrapper installiert: $CRON_DST"
 # Syntax prüfen
 logrotate -d "$TARGET"
 echo ""
-echo "logrotate-Konfiguration ist gueltig. Die Datei wird monatlich rotiert (oder frueher bei > 5M)."
+echo "logrotate-Konfiguration ist gueltig. Die Dateien werden monatlich rotiert (oder frueher bei > 5M)."
 echo "Aktuelle Regel:"
-echo "  Datei:    /var/www/wow9.internaut.ch/html/var/logs/internautenav-cron.log"
+echo "  Dateien:  /path/to/prestashop/var/logs/internautenav-cron.log"
+echo "            /path/to/prestashop/var/logs/prestashop-search-reindex.log"
 echo "  Rotation: monatlich, 12 komprimierte Staende, maxsize 5M, leere Logs ueberspringen"
 echo ""
 echo "Datierte PrestaShop-Logs werden zusaetzlich taeglich bereinigt:"

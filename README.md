@@ -274,7 +274,7 @@ Das ist Shell-Syntax fuer die Umleitung von Fehlerausgaben:
 Beispiel:
 
 ```bash
-0 3 * * * PS_ROOT_DIR=/var/www/wow9.internaut.ch/html /usr/bin/php /var/www/wow9.internaut.ch/html/modules/internautenav/cron.php --token=DEIN_TOKEN >> /var/www/wow9.internaut.ch/html/var/logs/internautenav-cron.log 2>&1
+0 3 * * * PS_ROOT_DIR=/path/to/prestashop /usr/bin/php /path/to/prestashop/modules/internautenav/cron.php --token=DEIN_TOKEN >> /path/to/prestashop/var/logs/internautenav-cron.log 2>&1
 ```
 
 Damit landen sowohl normale Ausgaben als auch Fehlermeldungen in derselben Logdatei.
@@ -293,7 +293,7 @@ Auf dem Server aktivierst du sie einmalig mit dem mitgelieferten Script:
 sudo bash deploy/setup-logrotate.sh
 ```
 
-Das Script legt `/etc/logrotate.d/internautenav-cron` an, setzt die Rechte und fuehrt direkt einen Dry-Run aus, um die Konfiguration zu pruefen. Die Regel rotiert die Datei monatlich, behaelt 12 komprimierte Staende und rotiert bei Bedarf frueher, falls die Datei groesser als 5 MB wird.
+Das Script legt `/etc/logrotate.d/internautenav-cron` an, setzt die Rechte und fuehrt direkt einen Dry-Run aus, um die Konfiguration zu pruefen. Die Regel rotiert `internautenav-cron.log` und `prestashop-search-reindex.log` monatlich, behaelt 12 komprimierte Staende und rotiert bei Bedarf frueher, falls eine Datei groesser als 5 MB wird.
 
 ### Hybrid-Strategie fuer PrestaShop-Logs
 
@@ -323,7 +323,7 @@ deploy/cleanup/prestashop-log-cleanup.cron.daily
 ```bash
 sudo logrotate -d /etc/logrotate.conf
 sudo logrotate -d /etc/logrotate.d/internautenav-cron
-sudo /usr/local/sbin/prestashop-dated-logs-cleanup /var/www/wow9.internaut.ch/html/var/logs 30
+sudo /usr/local/sbin/prestashop-dated-logs-cleanup /path/to/prestashop/var/logs 30
 ```
 
 ## License

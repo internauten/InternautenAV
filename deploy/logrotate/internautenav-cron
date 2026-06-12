@@ -1,4 +1,5 @@
-/var/www/wow9.internaut.ch/html/var/logs/internautenav-cron.log {
+/path/to/prestashop/var/logs/internautenav-cron.log
+/path/to/prestashop/var/logs/prestashop-search-reindex.log {
     monthly
     rotate 12
     compress

@@ -3,7 +3,7 @@
 # Erwartete Dateinamen enthalten ein Datum wie YYYY-MM-DD und enden auf .log oder .log.gz.
 set -euo pipefail
 
-LOGDIR="${1:-/var/www/wow9.internaut.ch/html/var/logs}"
+LOGDIR="${1:-/path/to/prestashop/var/logs}"
 KEEP_DAYS="${2:-30}"
 
 if [[ ! -d "$LOGDIR" ]]; then
