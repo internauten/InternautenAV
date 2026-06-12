@@ -26,7 +26,7 @@ class Internautenav extends Module
     {
         $this->name = 'internautenav';
         $this->tab = 'shipping_logistics';
-        $this->version = '1.3.0';
+        $this->version = '2.0.1';
         $this->author = 'die.internauten.ch';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -325,10 +325,15 @@ class Internautenav extends Module
         $lastCleanupDisplay = $lastCleanup ? date('d.m.Y H:i:s', (int) $lastCleanup) : $this->l('Noch nie ausgefuehrt');
 
         $pendingCount = 0;
+        $pendingUnassignedCount = 0;
         $expiredCount = 0;
         if ($this->ensureUploadTable()) {
             $cutoff = date('Y-m-d H:i:s', time() - self::UPLOAD_RETENTION_DAYS * 86400);
             $pendingCount = (int) Db::getInstance()->getValue(
+                'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
+                 WHERE 1'
+            );
+            $pendingUnassignedCount = (int) Db::getInstance()->getValue(
                 'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
                  WHERE (id_order IS NULL OR id_order = 0)'
             );
@@ -353,7 +358,8 @@ class Internautenav extends Module
         $output .= '<table class="table" style="font-size:13px;max-width:500px">';
         $output .= '<tr><td><strong>' . $this->l('Aufbewahrungsfrist') . '</strong></td><td>' . self::UPLOAD_RETENTION_DAYS . ' ' . $this->l('Tage') . '</td></tr>';
         $output .= '<tr><td><strong>' . $this->l('Letzter Cleanup') . '</strong></td><td>' . htmlspecialchars($lastCleanupDisplay, ENT_QUOTES, 'UTF-8') . '</td></tr>';
-        $output .= '<tr><td><strong>' . $this->l('Ausstehende Uploads (nicht abgeschlossen)') . '</strong></td><td>' . $pendingCount . '</td></tr>';
+        $output .= '<tr><td><strong>' . $this->l('Ausstehende Uploads (nicht abgeschlossen, gesamt)') . '</strong></td><td>' . $pendingCount . '</td></tr>';
+        $output .= '<tr><td><strong>' . $this->l('Davon ohne Bestellung') . '</strong></td><td>' . $pendingUnassignedCount . '</td></tr>';
         $output .= '<tr><td><strong>' . $this->l('Abgelaufene Eintraege') . '</strong></td><td>' . $expiredCount . '</td></tr>';
         $cronToken = hash('sha256', _COOKIE_KEY_ . 'internautenav_cron');
         $cronUrl = (Tools::usingSecureMode() ? 'https' : 'http') . '://' . Tools::getShopDomain(false, true)
@@ -914,8 +920,45 @@ class Internautenav extends Module
         }
 
         $rows = $this->getCustomerVerificationProtocol($idCustomer, 200);
+        $statusBadge = $this->renderCustomerVerificationStatusBadge($idCustomer, $rows);
 
-        $output = '<div class="card mt-2">';
+        $badgeId = 'internautenav-customer-status-badge';
+        $inlineBadge = '<div id="' . $badgeId . '" style="margin-bottom:8px">' . $statusBadge . '</div>';
+
+        $output = $inlineBadge;
+                $protocolCardId = 'internautenav-protocol-card';
+                $output .= '<script>(function(){
+    function inav_moveBadge() {
+        var badge = document.getElementById("' . $badgeId . '");
+        if (!badge) return;
+        // Search in main content area; fall back to body
+        var contentSelectors = ["#content", "#main", "main", "#main-div", ".page-body", "body"];
+        var content = null;
+        for (var c = 0; c < contentSelectors.length; c++) {
+            content = document.querySelector(contentSelectors[c]);
+            if (content) break;
+        }
+        // Find first card that is neither our protocol card nor contains the badge already
+        var cards = (content || document.body).querySelectorAll(".card");
+        for (var i = 0; i < cards.length; i++) {
+            var card = cards[i];
+            if (card.id === "' . $protocolCardId . '") continue;
+            if (card.contains(badge)) continue;
+            var body = card.querySelector(".card-body");
+            if (body) {
+                body.insertBefore(badge, body.firstChild);
+                return;
+            }
+        }
+    }
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", inav_moveBadge);
+    } else {
+        inav_moveBadge();
+    }
+})();</script>';
+
+                $output .= '<div class="card mt-2" id="' . $protocolCardId . '">';
         $output .= '<h3 class="card-header">' . htmlspecialchars($this->l('Alterspruefungsprotokoll', 'protocol'), ENT_QUOTES, 'UTF-8') . '</h3>';
         $output .= '<div class="card-body">';
 
@@ -1061,6 +1104,63 @@ class Internautenav extends Module
         );
 
         return is_array($rows) ? $rows : [];
+    }
+
+    private function renderCustomerVerificationStatusBadge($idCustomer, array $rows)
+    {
+        $idCustomer = (int) $idCustomer;
+
+        // Same priority as order badge: pending uploaded documents require manual decision first.
+        if ($idCustomer > 0 && $this->ensureUploadTable()) {
+            $pendingDocs = (int) Db::getInstance()->getValue(
+                'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
+                 WHERE id_customer = ' . $idCustomer . ' AND id_order > 0'
+            );
+            if ($pendingDocs > 0) {
+                return $this->renderOrderStatusBadge(
+                    'warning',
+                    '&#9888; ' . htmlspecialchars($this->l('Pruefung manuell erledigen'), ENT_QUOTES, 'UTF-8'),
+                    htmlspecialchars(
+                        sprintf($this->l('%d Dokument(e) hochgeladen, noch nicht geprüft.'), $pendingDocs),
+                        ENT_QUOTES,
+                        'UTF-8'
+                    )
+                );
+            }
+        }
+
+        if (empty($rows)) {
+            return $this->renderOrderStatusBadge(
+                'default',
+                '&#63; ' . htmlspecialchars($this->l('Keine Pruefung vorhanden'), ENT_QUOTES, 'UTF-8'),
+                htmlspecialchars($this->l('Für diesen Kunden liegt kein Verifikationseintrag vor.'), ENT_QUOTES, 'UTF-8')
+            );
+        }
+
+        $row = $rows[0];
+        $isOk = (int) ($row['result'] ?? 0) === 1;
+        $message = (string) ($row['result_message'] ?? '');
+        $docType = ucfirst((string) ($row['doc_type'] ?? ''));
+        $checkedAt = (string) ($row['checked_at'] ?? '');
+        $isManual = strpos($message, 'Manuelle Prüfung') !== false;
+
+        if ($isOk) {
+            $label = $isManual
+                ? '&#10003; ' . htmlspecialchars($this->l('Pruefung manuell bestanden'), ENT_QUOTES, 'UTF-8')
+                : '&#10003; ' . htmlspecialchars($this->l('Pruefung automatisch bestanden'), ENT_QUOTES, 'UTF-8');
+            $detail = ($isManual ? 'Manuell' : $docType);
+            if ($checkedAt !== '') {
+                $detail .= ' - ' . $checkedAt;
+            }
+
+            return $this->renderOrderStatusBadge('success', $label, htmlspecialchars($detail, ENT_QUOTES, 'UTF-8'));
+        }
+
+        return $this->renderOrderStatusBadge(
+            'danger',
+            '&#10007; ' . htmlspecialchars($this->l('Pruefung abgelehnt'), ENT_QUOTES, 'UTF-8'),
+            htmlspecialchars($message !== '' ? $message : $this->l('Letzte Prüfung war nicht erfolgreich.'), ENT_QUOTES, 'UTF-8')
+        );
     }
 
     private function renderOrderStatusBadge($type, $label, $detail)
@@ -1287,8 +1387,8 @@ function internautenavAdminAction(action, orderId, token, ajaxUrl) {
                 'lastname' => (string) $address->lastname,
             ];
 
-            if ($this->context->customer->isLogged()) {
-                $idCustomer = (int) $this->context->customer->id;
+            $idCustomer = $this->resolveCheckoutCustomerId();
+            if ($idCustomer > 0) {
                 if (!$this->setCustomerVerified($idCustomer, $verificationData)) {
                     return $this->finalizeMrzValidationResult($docType, false, $this->l('Verifikationsstatus konnte nicht gespeichert werden.'));
                 }
@@ -1364,8 +1464,8 @@ function internautenavAdminAction(action, orderId, token, ajaxUrl) {
         ];
 
         // Speichere unterschiedlich je nach Benutzer-Status
-        if ($this->context->customer->isLogged()) {
-            $idCustomer = (int) $this->context->customer->id;
+        $idCustomer = $this->resolveCheckoutCustomerId();
+        if ($idCustomer > 0) {
             if (!$this->setCustomerVerified($idCustomer, $verificationData)) {
                 return $this->failCheckoutValidation($this->l('Verifikationsstatus konnte nicht gespeichert werden.'));
             }
@@ -1392,11 +1492,31 @@ function internautenavAdminAction(action, orderId, token, ajaxUrl) {
             return false;
         }
 
-        if ($this->context->customer->isLogged()) {
-            return $this->isCustomerVerified((int) $this->context->customer->id);
+        $idCustomer = $this->resolveCheckoutCustomerId();
+        if ($idCustomer > 0) {
+            return $this->isCustomerVerified($idCustomer);
         }
 
         return $this->isCheckoutVerifiedForCarrier($carrier['id'], $carrier['reference']);
+    }
+
+    private function resolveCheckoutCustomerId()
+    {
+        if (Validate::isLoadedObject($this->context->customer)) {
+            $idCustomer = (int) $this->context->customer->id;
+            if ($idCustomer > 0) {
+                return $idCustomer;
+            }
+        }
+
+        if (Validate::isLoadedObject($this->context->cart)) {
+            $idCustomer = (int) $this->context->cart->id_customer;
+            if ($idCustomer > 0) {
+                return $idCustomer;
+            }
+        }
+
+        return 0;
     }
 
     private function extractMrzPayloadForCarrier($carrierId)
@@ -1669,8 +1789,8 @@ function internautenavAdminAction(action, orderId, token, ajaxUrl) {
                 'uploaded_document_id' => (int) ($storeResult['uploaded_document_id'] ?? 0),
             ];
 
-            if ($this->context->customer->isLogged()) {
-                $idCustomer = (int) $this->context->customer->id;
+            $idCustomer = $this->resolveCheckoutCustomerId();
+            if ($idCustomer > 0) {
                 if (!$this->setCustomerVerified($idCustomer, $verificationData)) {
                     return $this->finalizeMrzValidationResult('upload', false, 'Verifikationsstatus konnte nicht gespeichert werden.');
                 }
