@@ -45,7 +45,6 @@ $_MODULE['<{internautenav}prestashop>internautenav_99f71dedcc4ad16be05ddfffa6758
 $_MODULE['<{internautenav}prestashop>internautenav_97d7e6f529950514e562e52d04f0d7e4'] = 'Aufbewahrungsfrist';
 $_MODULE['<{internautenav}prestashop>internautenav_ea511d0f3441763ba2e9c0196342ed23'] = 'Tage';
 $_MODULE['<{internautenav}prestashop>internautenav_9445283ae84ac012d229b8202fdcbd6b'] = 'Letzter Cleanup';
-$_MODULE['<{internautenav}prestashop>internautenav_5965e7bc5238af0df695e208e2a75a9f'] = 'Ausstehende Uploads (nicht abgeschlossen)';
 $_MODULE['<{internautenav}prestashop>internautenav_9b1e6ad5556da369f6ae1d6c9a9d4072'] = 'Abgelaufene Eintraege';
 $_MODULE['<{internautenav}prestashop>internautenav_7be2338eb588ffbc0d37c1db7c1bb753'] = 'Cron-URL';
 $_MODULE['<{internautenav}prestashop>internautenav_d5abd4b179e3b8155bd1eca93bc49186'] = 'Taeglicher Aufruf empfohlen, z.B. via wget oder curl.';
@@ -70,6 +69,8 @@ $_MODULE['<{internautenav}prestashop>internautenav_81834431849f4042446b7c19e12e8
 $_MODULE['<{internautenav}prestashop>internautenav_c8afc51d042bea02c016d50f701cf52f'] = 'MRZ Zeile 1';
 $_MODULE['<{internautenav}prestashop>internautenav_ba42beea11a66e21bc73f4b953e82548'] = 'MRZ Zeile 2';
 $_MODULE['<{internautenav}prestashop>internautenav_3295794b75985b99452e318bbbb12036'] = 'MRZ Zeile 3 (nur CH ID)';
+$_MODULE['<{internautenav}prestashop>internautenav_f5b4d0e485de420b51a72243b2bf3440'] = 'Dokumentbild hochladen (jpg oder png)';
+$_MODULE['<{internautenav}prestashop>internautenav_73770d0b3fb4c399362b4531a1294d6b'] = 'Bitte laden Sie ein gut lesbares Bild eines amtlichen Dokuments hoch (Reisepass, Identitaetskarte, Aufenthaltsbewilligung oder anderes amtliches Dokument). Auf dem Bild muss der Name und das Geburtsdatum der Lieferadresse gut lesbar sein.';
 $_MODULE['<{internautenav}prestashop>internautenav_4086ac267cc51dcffd8581677232ee9c'] = 'Bitte Zeilen exakt wie im Dokument eingeben.';
 $_MODULE['<{internautenav}prestashop>internautenav_c219b01ba56f7e7bab786c8aa922bf1a'] = 'Altersprüfung bei Uebergabe';
 $_MODULE['<{internautenav}prestashop>internautenav_2202258d8e169a95c82dc52df11fbc3d'] = 'Diese Versandart erfordert keine Online-Altersprüfung.';
@@ -84,7 +85,6 @@ $_MODULE['<{internautenav}prestashop>internautenav_74f5c369e1e3a489d90b1035a2d04
 $_MODULE['<{internautenav}prestashop>internautenav_a5fb3312c6a2ed6a4d6afd1a43b5dbd8'] = 'Zu dieser Bestellung liegen keine hochgeladenen Dokumente vor.';
 $_MODULE['<{internautenav}prestashop>internautenav_58c971051e9e804fbb9f17114ab70724'] = 'Originaldatei';
 $_MODULE['<{internautenav}prestashop>internautenav_e6c7a581df1244f057a480657958cf22'] = 'Aktion';
-$_MODULE['<{internautenav}prestashop>internautenav_9753514844982210cc6647fe88367d16'] = 'Manuelle Altersprüfungsentscheidung:';
 $_MODULE['<{internautenav}prestashop>internautenav_e2fc39e61546337320044417e8a434b5'] = 'Altersprüfung bestanden';
 $_MODULE['<{internautenav}prestashop>internautenav_beb1adde5eaff64174c2cd3bfba2e383'] = 'Loescht alle Dokumente DSGVO-konform sofort.';
 $_MODULE['<{internautenav}prestashop>internautenav_bb44afc81b90a205c5864f98a960b904'] = 'Ungueltiger Carrier.';
