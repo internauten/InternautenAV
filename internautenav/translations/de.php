@@ -86,7 +86,10 @@ $_MODULE['<{internautenav}prestashop>internautenav_74f5c369e1e3a489d90b1035a2d04
 $_MODULE['<{internautenav}prestashop>internautenav_a5fb3312c6a2ed6a4d6afd1a43b5dbd8'] = 'Zu dieser Bestellung liegen keine hochgeladenen Dokumente vor.';
 $_MODULE['<{internautenav}prestashop>internautenav_58c971051e9e804fbb9f17114ab70724'] = 'Originaldatei';
 $_MODULE['<{internautenav}prestashop>internautenav_e6c7a581df1244f057a480657958cf22'] = 'Aktion';
+$_MODULE['<{internautenav}prestashop>internautenav_6970d846b5a5d22108e4e146c6e33275'] = 'Prüfen';
+$_MODULE['<{internautenav}prestashop>internautenav_644364becba639dfaed5eed2c8ffaf58'] = 'Dokumentvorschau';
 $_MODULE['<{internautenav}prestashop>internautenav_e2fc39e61546337320044417e8a434b5'] = 'Altersprüfung bestanden';
+$_MODULE['<{internautenav}prestashop>internautenav_5d830cd42e078e5dedbcc345a51f3be6'] = 'Schliessen';
 $_MODULE['<{internautenav}prestashop>internautenav_beb1adde5eaff64174c2cd3bfba2e383'] = 'Loescht alle Dokumente DSGVO-konform sofort.';
 $_MODULE['<{internautenav}prestashop>internautenav_bb44afc81b90a205c5864f98a960b904'] = 'Ungueltiger Carrier.';
 $_MODULE['<{internautenav}prestashop>internautenav_78150523e5650cb6f3ea03b1dd73775c'] = 'Carrier nicht gefunden.';

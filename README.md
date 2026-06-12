@@ -10,13 +10,13 @@ Modul zur Alters- und Identitätsprüfung für ausgewählte Versandarten via MRZ
 - Modulname: `internautenav`
 - Unterstützte Dokumenttypen im Checkout:
   - **MRZ-Scan:** CH ID (TD1, 3 Zeilen), CH Pass / EU Pass (TD3, 2 Zeilen)
-  - **Dokumenten-Upload:** Bild des Ausweises hochladen (JPG, JPEG, PNG, BMP, GIF, WMF – max. 10 MB)
+  - **Dokumenten-Upload:** Bild des Ausweises hochladen (JPG, JPEG, PNG – max. 10 MB, serverseitig re-encodiert)
 - Pflichtprüfung nur für ausgewählte Versandarten (Konfiguration im Backoffice)
 - Verifikation von Geburtsdatum, Name/Vorname gegen Lieferadresse, Alter >= 18 (MRZ)
 - Verifikation wird gespeichert:
-  - **Registrierte Kunden:** In DB, bei Folgebestellungen nicht mehr erforderlich
-  - **Gäste:** Session der aktuellen Bestellung
-- Admin-Panel in der Bestellübersicht zeigt hochgeladene Dokumente mit Download-Link
+  - **Registrierte Kunden:** In DB per `id_customer`, warenkorbunabhängig – bei Folgebestellungen und nach CC-Abbruch/neuem Warenkorb nicht mehr erforderlich
+  - **Gäste:** Session, gebunden an `carrier_reference` (nicht mehr an Warenkorb-ID)
+- Admin-Panel in der Bestellübersicht zeigt hochgeladene Dokumente mit Vorschau-Modal (Bildvorschau direkt im Browser)
 - Admin kann Prüfung manuell als **bestanden** oder **abgelehnt** markieren – löscht Dokumente sofort DSGVO-konform
 - Status-Badge oben auf der Bestellseite zeigt den aktuellen Prüfungsstatus auf einen Blick
 - DSGVO-konformer Upload-Retention-Cleanup (90 Tage Aufbewahrung)

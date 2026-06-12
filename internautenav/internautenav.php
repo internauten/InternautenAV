@@ -26,7 +26,7 @@ class Internautenav extends Module
     {
         $this->name = 'internautenav';
         $this->tab = 'shipping_logistics';
-        $this->version = '2.1.0';
+        $this->version = '2.1.1';
         $this->author = 'die.internauten.ch';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -743,12 +743,13 @@ class Internautenav extends Module
 
         $idOrder = (int) $order->id;
         $idCart = (int) $cart->id;
+        $idCustomer = (int) $order->id_customer;
 
-        if ($idOrder <= 0 || $idCart <= 0) {
+        if ($idOrder <= 0) {
             return;
         }
 
-        $this->attachPendingUploadsToOrder($idCart, $idOrder);
+        $this->attachPendingUploadsToOrder($idCart, $idOrder, $idCustomer);
     }
 
     public function hookDisplayAdminOrderTop($params)
@@ -793,15 +794,19 @@ class Internautenav extends Module
             }
         }
 
-        // Log-Eintrag für diesen Warenkorb suchen
+        // Log-Eintrag suchen: primär über id_customer, Fallback über id_cart.
+        $idCustomerOrder = (int) $order->id_customer;
         $idCart = (int) $order->id_cart;
-        if ($idCart > 0 && $this->ensureVerificationLogTable()) {
-            $logRow = Db::getInstance()->getRow(
+        if ($this->ensureVerificationLogTable()) {
+            $logCondition = $idCustomerOrder > 0
+                ? 'id_customer = ' . $idCustomerOrder
+                : ($idCart > 0 ? 'id_cart = ' . $idCart : null);
+            $logRow = $logCondition ? Db::getInstance()->getRow(
                 'SELECT `result`, `result_message`, `doc_type`, `checked_at`
                  FROM `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '`
-                 WHERE id_cart = ' . $idCart . '
+                 WHERE ' . $logCondition . '
                  ORDER BY checked_at DESC'
-            );
+            ) : null;
             if (is_array($logRow) && isset($logRow['result'])) {
                 $isManual = (strpos((string) ($logRow['result_message'] ?? ''), 'Manuelle Prüfung') !== false);
                 if ((int) $logRow['result'] === 1) {
@@ -1016,15 +1021,20 @@ class Internautenav extends Module
             return '';
         }
 
+        $idCustomerOrder = (int) $order->id_customer;
         $idCart = (int) $order->id_cart;
-        if ($idCart <= 0) {
+        $logCondition = $idCustomerOrder > 0
+            ? 'id_customer = ' . $idCustomerOrder
+            : ($idCart > 0 ? 'id_cart = ' . $idCart : null);
+
+        if ($logCondition === null) {
             return '';
         }
 
         $logRows = Db::getInstance()->executeS(
             'SELECT `result`, `result_message`, `doc_type`, `checked_at`
              FROM `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '`
-             WHERE id_cart = ' . $idCart . '
+             WHERE ' . $logCondition . '
              ORDER BY checked_at DESC'
         );
         if (!is_array($logRows) || empty($logRows)) {
@@ -1556,18 +1566,18 @@ document.addEventListener("keydown", function (event) {
 
     private function isAlreadyVerifiedForCheckout()
     {
-        $carrier = $this->getCurrentCheckoutCarrier();
-        if (!$carrier) {
-            $this->clearCheckoutVerificationState();
-            return false;
-        }
-
         $idCustomer = $this->resolveCheckoutCustomerId();
         if ($idCustomer > 0) {
             return $this->isCustomerVerified($idCustomer);
         }
 
-        return $this->isCheckoutVerifiedForCarrier($carrier['id'], $carrier['reference']);
+        $carrier = $this->getCurrentCheckoutCarrier();
+        if (!$carrier) {
+            // No carrier detected yet (e.g. early in checkout) — do not clear session.
+            return false;
+        }
+
+        return $this->isCheckoutVerifiedForCarrier($carrier['reference']);
     }
 
     private function resolveCheckoutCustomerId()
@@ -1722,8 +1732,6 @@ document.addEventListener("keydown", function (event) {
 
         $_SESSION[self::SESSION_VERIFICATION_KEY] = [
             'verified' => true,
-            'cart_id' => (int) $this->context->cart->id,
-            'carrier_id' => (int) $carrier['id'],
             'carrier_reference' => (int) $carrier['reference'],
             'doc_type' => (string) ($data['doc_type'] ?? ''),
             'birth_date' => (string) ($data['birth_date'] ?? ''),
@@ -1742,17 +1750,14 @@ document.addEventListener("keydown", function (event) {
         unset($_SESSION['internautenav_guest_verified'], $_SESSION['internautenav_guest_data']);
     }
 
-    private function isCheckoutVerifiedForCarrier($carrierId, $carrierReference)
+    private function isCheckoutVerifiedForCarrier($carrierReference)
     {
         $state = $this->getCheckoutVerificationState();
         if (empty($state)) {
             return false;
         }
 
-        $cartId = Validate::isLoadedObject($this->context->cart) ? (int) $this->context->cart->id : 0;
         $isValid = !empty($state['verified'])
-            && (int) ($state['cart_id'] ?? 0) === $cartId
-            && (int) ($state['carrier_id'] ?? 0) === (int) $carrierId
             && (int) ($state['carrier_reference'] ?? 0) === (int) $carrierReference;
 
         if (!$isValid) {
@@ -1812,7 +1817,7 @@ document.addEventListener("keydown", function (event) {
     {
         $sql = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '` (
             `id_internautenav_uploaded_document` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-            `id_cart` INT(10) UNSIGNED NOT NULL,
+            `id_cart` INT(10) UNSIGNED NULL,
             `id_order` INT(10) UNSIGNED NULL,
             `id_customer` INT(10) UNSIGNED NULL,
             `doc_type` VARCHAR(16) NOT NULL,
@@ -1823,10 +1828,28 @@ document.addEventListener("keydown", function (event) {
             `created_at` DATETIME NOT NULL,
             `attached_at` DATETIME NULL,
             PRIMARY KEY (`id_internautenav_uploaded_document`),
-            KEY `idx_id_cart` (`id_cart`),
+            KEY `idx_id_customer` (`id_customer`),
             KEY `idx_id_order` (`id_order`),
             KEY `idx_created_at` (`created_at`)
         ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8mb4;';
+
+        // Migrate existing installations: make id_cart nullable and add id_customer index.
+        Db::getInstance()->execute(
+            'ALTER TABLE `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
+             MODIFY `id_cart` INT(10) UNSIGNED NULL'
+        );
+        $indexExists = (int) Db::getInstance()->getValue(
+            'SELECT COUNT(*) FROM information_schema.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = \'' . pSQL(_DB_PREFIX_ . self::DB_UPLOAD_TABLE) . '\'
+               AND INDEX_NAME = \'idx_id_customer\''
+        );
+        if (!$indexExists) {
+            Db::getInstance()->execute(
+                'ALTER TABLE `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
+                 ADD INDEX `idx_id_customer` (`id_customer`)'
+            );
+        }
 
         return Db::getInstance()->execute($sql);
     }
@@ -2036,9 +2059,12 @@ document.addEventListener("keydown", function (event) {
         }
 
         $idCart = Validate::isLoadedObject($this->context->cart) ? (int) $this->context->cart->id : 0;
-        $idCustomer = Validate::isLoadedObject($this->context->customer) ? (int) $this->context->customer->id : null;
+        $idCustomer = $this->resolveCheckoutCustomerId();
+        if ($idCustomer <= 0 && Validate::isLoadedObject($this->context->customer)) {
+            $idCustomer = (int) $this->context->customer->id;
+        }
         $insertOk = Db::getInstance()->insert(self::DB_UPLOAD_TABLE, [
-            'id_cart' => $idCart,
+            'id_cart' => $idCart > 0 ? $idCart : null,
             'id_order' => null,
             'id_customer' => $idCustomer > 0 ? $idCustomer : null,
             'doc_type' => pSQL((string) $docType),
@@ -2064,18 +2090,29 @@ document.addEventListener("keydown", function (event) {
         ];
     }
 
-    private function attachPendingUploadsToOrder($idCart, $idOrder)
+    private function attachPendingUploadsToOrder($idCart, $idOrder, $idCustomer = 0)
     {
         $idCart = (int) $idCart;
         $idOrder = (int) $idOrder;
-        if ($idCart <= 0 || $idOrder <= 0) {
+        $idCustomer = (int) $idCustomer;
+        if ($idOrder <= 0) {
+            return;
+        }
+
+        // Primary: match by id_customer (survives cart change after CC failure).
+        // Fallback: match by id_cart for guest sessions without a customer id.
+        if ($idCustomer > 0) {
+            $where = 'id_customer = ' . $idCustomer . ' AND (id_order IS NULL OR id_order = 0)';
+        } elseif ($idCart > 0) {
+            $where = 'id_cart = ' . $idCart . ' AND (id_order IS NULL OR id_order = 0)';
+        } else {
             return;
         }
 
         $rows = Db::getInstance()->executeS(
             'SELECT `id_internautenav_uploaded_document`, `file_name`
              FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
-             WHERE id_cart = ' . $idCart . ' AND (id_order IS NULL OR id_order = 0)'
+             WHERE ' . $where
         );
 
         if (!is_array($rows) || empty($rows)) {
@@ -2103,7 +2140,7 @@ document.addEventListener("keydown", function (event) {
                 'id_order' => $idOrder,
                 'attached_at' => date('Y-m-d H:i:s'),
             ],
-            'id_cart = ' . $idCart . ' AND (id_order IS NULL OR id_order = 0)'
+            $where
         );
     }
 
