@@ -274,7 +274,7 @@
               type="file"
               name="internautenav_modal_upload_file"
               data-upload-file="1"
-              accept="image/jpeg,image/png,image/bmp,image/gif,image/wmf,image/x-wmf,.jpg,.jpeg,.png,.bmp,.gif,.wmf"
+              accept="image/jpeg,image/png,.jpg,.jpeg,.png"
               autocomplete="off"
             >
             <p class="help-block">{$internautenav_upload_hint|escape:'htmlall':'UTF-8'}</p>

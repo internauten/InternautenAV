@@ -26,7 +26,7 @@ class Internautenav extends Module
     {
         $this->name = 'internautenav';
         $this->tab = 'shipping_logistics';
-        $this->version = '2.0.1';
+        $this->version = '2.1.0';
         $this->author = 'die.internauten.ch';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -1917,11 +1917,11 @@ document.addEventListener("keydown", function (event) {
         $originalName = isset($uploadFile['name']) ? (string) $uploadFile['name'] : 'document';
         $originalName = basename($originalName);
         $extension = Tools::strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-        $allowedExtensions = ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'wmf'];
+        $allowedExtensions = ['jpg', 'jpeg', 'png'];
         if (!in_array($extension, $allowedExtensions, true)) {
             return [
                 'valid' => false,
-                'message' => 'Bitte laden Sie eine Datei im Format JPG, JPEG, PNG, BMP, GIF oder WMF hoch. (Erkannte Endung: ' . htmlspecialchars($extension, ENT_QUOTES, 'UTF-8') . ')',
+                'message' => 'Bitte laden Sie eine Datei im Format JPG, JPEG oder PNG hoch. (Erkannte Endung: ' . htmlspecialchars($extension, ENT_QUOTES, 'UTF-8') . ')',
             ];
         }
 
@@ -1937,11 +1937,11 @@ document.addEventListener("keydown", function (event) {
             }
         }
 
-        $allowedMimes = ['image/jpeg', 'image/png', 'image/bmp', 'image/x-bmp', 'image/gif', 'image/wmf', 'image/x-wmf', 'application/x-msmetafile'];
+        $allowedMimes = ['image/jpeg', 'image/png'];
         if ($mimeType !== '' && !in_array($mimeType, $allowedMimes, true)) {
             return [
                 'valid' => false,
-                'message' => 'Ungueltige Datei. Erkannter Typ: ' . $mimeType . '. Erlaubt: JPG, PNG, BMP, GIF, WMF.',
+                'message' => 'Ungueltige Datei. Erkannter Typ: ' . $mimeType . '. Erlaubt: JPG, PNG.',
             ];
         }
 
@@ -1962,13 +1962,76 @@ document.addEventListener("keydown", function (event) {
         }
 
         $generated = date('YmdHis') . '_' . $randomPart;
-        $safeFileName = $generated . '.' . $extension;
-        $targetPath = $pendingDir . '/' . $safeFileName;
 
-        if (!move_uploaded_file($tmpName, $targetPath)) {
+        $imageInfo = @getimagesize($tmpName);
+        if (!is_array($imageInfo) || !isset($imageInfo['mime'])) {
             return [
                 'valid' => false,
-                'message' => 'Die Datei konnte nicht ins Zielverzeichnis verschoben werden.',
+                'message' => 'Die hochgeladene Datei ist kein gueltiges Bild.',
+            ];
+        }
+
+        $detectedImageMime = (string) $imageInfo['mime'];
+        $outputExtension = 'jpg';
+        $outputMime = 'image/jpeg';
+        if ($detectedImageMime === 'image/png') {
+            $outputExtension = 'png';
+            $outputMime = 'image/png';
+        } elseif ($detectedImageMime !== 'image/jpeg') {
+            return [
+                'valid' => false,
+                'message' => 'Nur JPEG und PNG sind erlaubt.',
+            ];
+        }
+
+        if (!function_exists('imagecreatefromstring')) {
+            return [
+                'valid' => false,
+                'message' => 'Server-Konfiguration unvollstaendig: GD imagecreatefromstring fehlt.',
+            ];
+        }
+
+        $safeFileName = $generated . '.' . $outputExtension;
+        $targetPath = $pendingDir . '/' . $safeFileName;
+
+        // Re-encode the image to strip potentially dangerous payloads and metadata.
+        $rawData = @file_get_contents($tmpName);
+        if ($rawData === false) {
+            return [
+                'valid' => false,
+                'message' => 'Die Datei konnte nicht gelesen werden.',
+            ];
+        }
+
+        $imageResource = @imagecreatefromstring($rawData);
+        if ($imageResource === false) {
+            return [
+                'valid' => false,
+                'message' => 'Das Bild konnte nicht verarbeitet werden.',
+            ];
+        }
+
+        $writeOk = false;
+        if ($outputMime === 'image/png' && function_exists('imagepng')) {
+            $writeOk = @imagepng($imageResource, $targetPath, 6);
+        } elseif ($outputMime === 'image/jpeg' && function_exists('imagejpeg')) {
+            $writeOk = @imagejpeg($imageResource, $targetPath, 90);
+        }
+        imagedestroy($imageResource);
+
+        if (!$writeOk) {
+            return [
+                'valid' => false,
+                'message' => 'Die Datei konnte nicht sicher gespeichert werden.',
+            ];
+        }
+
+        $storedFileSize = (int) @filesize($targetPath);
+        if ($storedFileSize <= 0) {
+            @unlink($targetPath);
+            return [
+                'valid' => false,
+                'message' => 'Die gespeicherte Datei ist ungueltig.',
             ];
         }
 
@@ -1981,8 +2044,8 @@ document.addEventListener("keydown", function (event) {
             'doc_type' => pSQL((string) $docType),
             'file_name' => pSQL($safeFileName),
             'original_name' => pSQL($originalName),
-            'mime_type' => pSQL($mimeType !== '' ? $mimeType : 'application/octet-stream'),
-            'file_size' => (int) $fileSize,
+            'mime_type' => pSQL($outputMime),
+            'file_size' => $storedFileSize,
             'created_at' => date('Y-m-d H:i:s'),
             'attached_at' => null,
         ]);
@@ -2115,7 +2178,8 @@ document.addEventListener("keydown", function (event) {
 
         header('Content-Description: File Transfer');
         header('Content-Type: ' . $mimeType);
-        header('Content-Disposition: attachment; filename="' . str_replace('"', '', $downloadName) . '"');
+        header('X-Content-Type-Options: nosniff');
+        header('Content-Disposition: inline; filename="' . str_replace('"', '', $downloadName) . '"');
         header('Content-Length: ' . $fileSize);
         header('Cache-Control: private, must-revalidate, max-age=0');
         header('Pragma: public');
