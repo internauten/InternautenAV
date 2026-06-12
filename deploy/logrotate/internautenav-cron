@@ -1,0 +1,11 @@
+/var/www/wow9.internaut.ch/html/var/logs/internautenav-cron.log {
+    monthly
+    rotate 12
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    maxsize 5M
+    su www-data www-data
+}

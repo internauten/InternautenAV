@@ -108,6 +108,12 @@ Das Modul registriert den Hook `actionCronJob`. Wenn das offizielle PS-Cronjobs-
 Die genaue Cron-URL inkl. Token findest du im Backoffice unter:  
 **Module → InternautenAV → Konfiguration → DSGVO Upload-Cleanup → Cron-URL**
 
+Eintragen solltest du sie unter dem Benutzer www-data:
+
+```bash
+sudo crontab -u www-data -e
+```
+
 **Webserver (wget/curl, täglich um 03:00 Uhr):**
 
 ```bash
@@ -220,6 +226,105 @@ Voraussetzungen: im Compose hat es unter volumes einen Eintrag `- /home/youruser
    chown -h www-data:www-data /var/www/html/modules/internautenav
    ```
 4. Modul im PrestaShop-Backoffice unter Modul-Manager installieren und konfigurieren.
+
+## Cron-Erklaerung
+
+Falls der Cleanup als System-Cron eingerichtet wird, helfen die folgenden Kurzerklaerungen:
+
+### `sudo crontab -u www-data -e`
+
+- `sudo` fuehrt den Befehl mit erweiterten Rechten aus
+- `crontab` bearbeitet die Cronjobs eines Benutzers
+- `-u www-data` meint: bearbeite den Cron des Benutzers `www-data`
+- `-e` oeffnet den Cronjob-Editor
+
+Der Benutzer `www-data` ist auf Debian/Ubuntu-Systemen ueblicherweise der Webserver-Benutzer. Der Cronjob laeuft damit mit denselben Dateirechten wie PrestaShop.
+
+### `0 3 * * *`
+
+Das ist der Zeitplan im Cron-Format und bedeutet: taeglich um `03:00` Uhr.
+
+Die fuenf Felder von links nach rechts sind:
+
+```text
+┌ Minute
+│ ┌ Stunde
+│ │ ┌ Tag im Monat
+│ │ │ ┌ Monat
+│ │ │ │ ┌ Wochentag
+│ │ │ │ │
+0 3 * * *
+```
+
+- `0` bei Minute: zur Minute 0
+- `3` bei Stunde: um 3 Uhr nachts
+- `*` bei Tag im Monat: an jedem Tag des Monats
+- `*` bei Monat: in jedem Monat
+- `*` bei Wochentag: an jedem Wochentag
+
+### `2>&1`
+
+Das ist Shell-Syntax fuer die Umleitung von Fehlerausgaben:
+
+- `1` ist `stdout`, also normale Ausgabe
+- `2` ist `stderr`, also Fehlermeldungen
+- `>> logfile` haengt die normale Ausgabe an eine Datei an
+- `2>&1` leitet die Fehlerausgabe auf dasselbe Ziel wie die normale Ausgabe um
+
+Beispiel:
+
+```bash
+0 3 * * * PS_ROOT_DIR=/var/www/wow9.internaut.ch/html /usr/bin/php /var/www/wow9.internaut.ch/html/modules/internautenav/cron.php --token=DEIN_TOKEN >> /var/www/wow9.internaut.ch/html/var/logs/internautenav-cron.log 2>&1
+```
+
+Damit landen sowohl normale Ausgaben als auch Fehlermeldungen in derselben Logdatei.
+
+### Logrotate-Vorlage
+
+Wenn die Cron-Ausgabe in eine Datei geschrieben wird, kann Ubuntu sie mit `logrotate` automatisch bereinigen. Eine passende Vorlage fuer diesen Server liegt als Beispiel unter:
+
+```text
+deploy/logrotate/internautenav-cron
+```
+
+Auf dem Server aktivierst du sie einmalig mit dem mitgelieferten Script:
+
+```bash
+sudo bash deploy/setup-logrotate.sh
+```
+
+Das Script legt `/etc/logrotate.d/internautenav-cron` an, setzt die Rechte und fuehrt direkt einen Dry-Run aus, um die Konfiguration zu pruefen. Die Regel rotiert die Datei monatlich, behaelt 12 komprimierte Staende und rotiert bei Bedarf frueher, falls die Datei groesser als 5 MB wird.
+
+### Hybrid-Strategie fuer PrestaShop-Logs
+
+PrestaShop erzeugt oft datierte Tages-Logs (z.B. mit `YYYY-MM-DD` im Namen). Diese sollten nicht erneut mit `logrotate` rotiert werden. Stattdessen nutzt das Setup-Script eine Hybrid-Strategie:
+
+- Nicht-datierte Logs: Rotation ueber `logrotate` (monatlich, komprimiert)
+- Datierte Logs: taeglicher Cleanup per `find` und Loeschung nach 30 Tagen
+
+Installierte Bestandteile:
+
+```text
+/etc/logrotate.d/internautenav-cron
+/usr/local/sbin/prestashop-dated-logs-cleanup
+/etc/cron.daily/prestashop-log-cleanup
+```
+
+Vorlagen im Repository:
+
+```text
+deploy/logrotate/internautenav-cron
+deploy/cleanup/prestashop-dated-logs-cleanup.sh
+deploy/cleanup/prestashop-log-cleanup.cron.daily
+```
+
+### Vorlage testen
+
+```bash
+sudo logrotate -d /etc/logrotate.conf
+sudo logrotate -d /etc/logrotate.d/internautenav-cron
+sudo /usr/local/sbin/prestashop-dated-logs-cleanup /var/www/wow9.internaut.ch/html/var/logs 30
+```
 
 ## License
 
