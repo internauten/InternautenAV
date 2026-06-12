@@ -1262,9 +1262,11 @@ class Internautenav extends Module
             $output .= '<td>' . htmlspecialchars($this->formatFileSize((int) $row['file_size']), ENT_QUOTES, 'UTF-8') . '</td>';
             $output .= '<td>' . htmlspecialchars((string) $row['created_at'], ENT_QUOTES, 'UTF-8') . '</td>';
             $output .= '<td>'
-                . '<a class="btn btn-default btn-xs" href="' . htmlspecialchars($downloadUrl, ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="noopener noreferrer">'
-                . '<i class="icon-download"></i> ' . htmlspecialchars($this->l('Ansehen'), ENT_QUOTES, 'UTF-8')
-                . '</a></td>';
+                . '<button type="button" class="btn btn-default btn-xs js-internautenav-preview"'
+                . ' data-preview-url="' . htmlspecialchars($downloadUrl, ENT_QUOTES, 'UTF-8') . '"'
+                . ' data-file-name="' . htmlspecialchars((string) $row['original_name'], ENT_QUOTES, 'UTF-8') . '">'
+                . '<i class="icon-eye"></i> ' . htmlspecialchars($this->l('Ansehen'), ENT_QUOTES, 'UTF-8')
+                . '</button></td>';
             $output .= '</tr>';
         }
 
@@ -1272,25 +1274,29 @@ class Internautenav extends Module
         $output .= '</div>';
         $output .= '</div>';
 
-        // --- Manuelle Prüfungsentscheidung (card-footer) ---
         $adminToken = hash('sha256', _COOKIE_KEY_ . 'internautenav_admin_action' . $idOrder);
         $ajaxUrl = htmlspecialchars(__PS_BASE_URI__ . 'modules/' . $this->name . '/ajax.php', ENT_QUOTES, 'UTF-8');
-        $output .= '<div class="card-footer">';
-        $output .= '<span class="text-muted" style="margin-right:12px">'
-            . htmlspecialchars($this->l('Manuelle Pruefungsentscheidung:'), ENT_QUOTES, 'UTF-8')
-            . '</span>';
-        $output .= '<button class="btn btn-success btn-sm"'
-            . ' onclick="internautenavAdminAction(\'approve\', ' . $idOrder . ', \'' . $adminToken . '\', \'' . $ajaxUrl . '\'); return false;">'
+        $output .= '<div id="internautenav-preview-modal-' . (int) $idOrder . '" class="internautenav-admin-modal" style="display:none;position:fixed;z-index:20000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.65);">';
+        $output .= '<div class="internautenav-admin-modal-dialog" style="position:relative;max-width:980px;margin:4vh auto;background:#fff;border-radius:6px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:14px 14px 12px;">';
+        $output .= '<button type="button" class="btn btn-link js-internautenav-modal-close" style="position:absolute;right:10px;top:6px;font-size:24px;line-height:1;text-decoration:none;">&times;</button>';
+        $output .= '<h4 style="margin:0 0 8px;">' . htmlspecialchars($this->l('Dokumentvorschau'), ENT_QUOTES, 'UTF-8') . '</h4>';
+        $output .= '<div id="internautenav-preview-filename-' . (int) $idOrder . '" class="text-muted" style="margin-bottom:8px;font-size:12px;"></div>';
+        $output .= '<div style="text-align:center;max-height:68vh;overflow:auto;border:1px solid #ddd;background:#fafafa;">';
+        $output .= '<img id="internautenav-preview-image-' . (int) $idOrder . '" src="" alt="' . htmlspecialchars($this->l('Dokumentvorschau'), ENT_QUOTES, 'UTF-8') . '" style="max-width:100%;max-height:66vh;display:block;margin:0 auto;">';
+        $output .= '</div>';
+        $output .= '<div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">';
+        $output .= '<button type="button" class="btn btn-success btn-sm js-internautenav-modal-action" data-action="approve" data-order-id="' . (int) $idOrder . '" data-token="' . $adminToken . '" data-ajax-url="' . $ajaxUrl . '">'
             . '<i class="icon-ok"></i> ' . htmlspecialchars($this->l('Pruefung bestanden'), ENT_QUOTES, 'UTF-8')
             . '</button>';
-        $output .= ' <button class="btn btn-danger btn-sm"'
-            . ' onclick="internautenavAdminAction(\'reject\', ' . $idOrder . ', \'' . $adminToken . '\', \'' . $ajaxUrl . '\'); return false;">'
+        $output .= '<button type="button" class="btn btn-danger btn-sm js-internautenav-modal-action" data-action="reject" data-order-id="' . (int) $idOrder . '" data-token="' . $adminToken . '" data-ajax-url="' . $ajaxUrl . '">'
             . '<i class="icon-remove"></i> ' . htmlspecialchars($this->l('Pruefung abgelehnt'), ENT_QUOTES, 'UTF-8')
             . '</button>';
-        $output .= ' <span class="text-muted" style="margin-left:10px;font-size:11px">'
-            . '<i class="icon-shield"></i> '
+        $output .= '<button type="button" class="btn btn-default btn-sm js-internautenav-modal-close">' . htmlspecialchars($this->l('Schliessen'), ENT_QUOTES, 'UTF-8') . '</button>';
+        $output .= '<span class="text-muted" style="margin-left:8px;font-size:11px"><i class="icon-shield"></i> '
             . htmlspecialchars($this->l('Loescht alle Dokumente DSGVO-konform sofort.'), ENT_QUOTES, 'UTF-8')
             . '</span>';
+        $output .= '</div>';
+        $output .= '</div>';
         $output .= '</div>';
 
         if (!defined('INTERNAUTENAV_ADMIN_JS_LOADED')) {
@@ -1314,6 +1320,70 @@ function internautenavAdminAction(action, orderId, token, ajaxUrl) {
         })
         .catch(function() { alert("Verbindungsfehler beim Speichern der Entscheidung."); });
 }
+
+function internautenavOpenPreviewModal(orderId, imageUrl, fileName) {
+    var modal = document.getElementById("internautenav-preview-modal-" + orderId);
+    var image = document.getElementById("internautenav-preview-image-" + orderId);
+    var nameNode = document.getElementById("internautenav-preview-filename-" + orderId);
+    if (!modal || !image || !nameNode) { return; }
+    image.setAttribute("src", imageUrl || "");
+    nameNode.textContent = fileName || "";
+    modal.style.display = "block";
+}
+
+function internautenavClosePreviewModal(orderId) {
+    var modal = document.getElementById("internautenav-preview-modal-" + orderId);
+    var image = document.getElementById("internautenav-preview-image-" + orderId);
+    if (!modal) { return; }
+    modal.style.display = "none";
+    if (image) {
+        image.setAttribute("src", "");
+    }
+}
+
+document.addEventListener("click", function (event) {
+    var previewBtn = event.target.closest(".js-internautenav-preview");
+    if (previewBtn) {
+        event.preventDefault();
+        var modal = previewBtn.closest(".card").querySelector("[id^=\"internautenav-preview-modal-\"]");
+        if (!modal) { return; }
+        var orderId = (modal.id || "").replace("internautenav-preview-modal-", "");
+        internautenavOpenPreviewModal(orderId, previewBtn.getAttribute("data-preview-url") || "", previewBtn.getAttribute("data-file-name") || "");
+        return;
+    }
+
+    var closeBtn = event.target.closest(".js-internautenav-modal-close");
+    if (closeBtn) {
+        event.preventDefault();
+        var closeModal = closeBtn.closest("[id^=\"internautenav-preview-modal-\"]");
+        if (!closeModal) { return; }
+        var closeOrderId = (closeModal.id || "").replace("internautenav-preview-modal-", "");
+        internautenavClosePreviewModal(closeOrderId);
+        return;
+    }
+
+    var actionBtn = event.target.closest(".js-internautenav-modal-action");
+    if (actionBtn) {
+        event.preventDefault();
+        var action = actionBtn.getAttribute("data-action") || "";
+        var orderId = parseInt(actionBtn.getAttribute("data-order-id") || "0", 10);
+        var token = actionBtn.getAttribute("data-token") || "";
+        var ajaxUrl = actionBtn.getAttribute("data-ajax-url") || "";
+        if (!action || !orderId || !token || !ajaxUrl) { return; }
+        internautenavAdminAction(action, orderId, token, ajaxUrl);
+    }
+});
+
+document.addEventListener("keydown", function (event) {
+    if (event.key !== "Escape") { return; }
+    var openModals = document.querySelectorAll("[id^=\"internautenav-preview-modal-\"]");
+    for (var i = 0; i < openModals.length; i++) {
+        if (openModals[i].style.display === "block") {
+            var orderId = (openModals[i].id || "").replace("internautenav-preview-modal-", "");
+            internautenavClosePreviewModal(orderId);
+        }
+    }
+});
 </script>';
         }
 
