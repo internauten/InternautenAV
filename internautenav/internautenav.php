@@ -151,7 +151,17 @@ class Internautenav extends Module
 
         $token = Tools::getAdminTokenLite('AdminModules');
         $persistListTable = 'internautenav_persistent';
+        $logListTable = 'internautenav_log';
         if (Tools::isSubmit('submitReset' . $persistListTable)) {
+            Tools::redirectAdmin(
+                AdminController::$currentIndex
+                . '&configure=' . $this->name
+                . '&tab_module=' . $this->tab
+                . '&module_name=' . $this->name
+                . '&token=' . $token
+            );
+        }
+        if (Tools::isSubmit('submitReset' . $logListTable)) {
             Tools::redirectAdmin(
                 AdminController::$currentIndex
                 . '&configure=' . $this->name
@@ -211,34 +221,7 @@ class Internautenav extends Module
         $output .= '</form>';
         $output .= '</div>';
 
-        // --- Verification log panel ---
-        $this->ensureVerificationLogTable();
-
-        $logRows = Db::getInstance()->executeS(
-            'SELECT l.*, c.firstname, c.lastname, c.email
-             FROM `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '` l
-             LEFT JOIN `' . _DB_PREFIX_ . 'customer` c ON c.id_customer = l.id_customer
-             ORDER BY l.checked_at DESC
-             LIMIT 200'
-        );
-        if (!is_array($logRows)) {
-            $logRows = [];
-        }
-
-        $orderByRaw = (string) Tools::getValue($persistListTable . 'Orderby', 'verified_at');
-        $orderWayRaw = strtoupper((string) Tools::getValue($persistListTable . 'Orderway', 'DESC'));
-        $orderColumns = [
-            'id_customer' => 'v.id_customer',
-            'fullname' => 'fullname',
-            'email' => 'c.email',
-            'doc_type' => 'v.doc_type',
-            'birth_date' => 'v.birth_date',
-            'verified_at' => 'v.verified_at',
-        ];
-        $orderBy = isset($orderColumns[$orderByRaw]) ? $orderColumns[$orderByRaw] : 'v.verified_at';
-        $orderWay = in_array($orderWayRaw, ['ASC', 'DESC'], true) ? $orderWayRaw : 'DESC';
-
-        $persistWhere = [];
+        // --- Shared filter helper functions ---
         $listFilters = (array) Tools::getAllValues();
         $readListFilter = static function ($table, $field, array $aliases = []) use ($listFilters) {
             $keys = array_merge([$field], $aliases);
@@ -315,6 +298,126 @@ class Internautenav extends Module
             return '';
         };
 
+        // --- Verification log panel ---
+        $this->ensureVerificationLogTable();
+
+        $logOrderByRaw = (string) Tools::getValue($logListTable . 'Orderby', 'checked_at');
+        $logOrderWayRaw = strtoupper((string) Tools::getValue($logListTable . 'Orderway', 'DESC'));
+        $logOrderColumns = [
+            'id_internautenav_verification_log' => 'l.id_internautenav_verification_log',
+            'checked_at' => 'l.checked_at',
+            'customer_reference' => 'l.customer_reference',
+            'customer' => 'CONCAT(COALESCE(c.firstname, \'\'), \' \', COALESCE(c.lastname, \'\'))',
+            'id_cart' => 'l.id_cart',
+            'doc_type' => 'l.doc_type',
+            'result' => 'l.result',
+        ];
+        $logOrderBy = isset($logOrderColumns[$logOrderByRaw]) ? $logOrderColumns[$logOrderByRaw] : 'l.checked_at';
+        $logOrderWay = in_array($logOrderWayRaw, ['ASC', 'DESC'], true) ? $logOrderWayRaw : 'DESC';
+
+        $logWhere = [];
+        $logFilterIdLog = $readListFilter($logListTable, 'id_internautenav_verification_log');
+        $logFilterCustomerRef = $readListFilter($logListTable, 'customer_reference');
+        $logFilterCustomerName = $readListFilter($logListTable, 'customer');
+        $logFilterIdCart = $readListFilter($logListTable, 'id_cart');
+        $logFilterDocType = $readListFilter($logListTable, 'doc_type');
+        $logFilterResult = trim((string) Tools::getValue($logListTable . 'Filter_result', ''));
+        $logFilterResultMessage = $readListFilter($logListTable, 'result_message');
+        list($logFilterCheckedAtFromRaw, $logFilterCheckedAtToRaw) = $readListDateRange($logListTable, 'checked_at');
+        $logFilterCheckedAtFrom = $normalizeDateForSql($logFilterCheckedAtFromRaw);
+        $logFilterCheckedAtTo = $normalizeDateForSql($logFilterCheckedAtToRaw);
+
+        if ($logFilterIdLog !== '' && ctype_digit($logFilterIdLog)) {
+            $logWhere[] = 'l.id_internautenav_verification_log = ' . (int) $logFilterIdLog;
+        }
+        if ($logFilterCustomerRef !== '') {
+            $logWhere[] = 'COALESCE(l.customer_reference, \'\') LIKE \'' . pSQL('%' . $logFilterCustomerRef . '%') . '\'';
+        }
+        if ($logFilterCustomerName !== '') {
+            $logWhere[] = 'CONCAT(COALESCE(c.firstname, \'\'), \' \', COALESCE(c.lastname, \'\')) LIKE \'' . pSQL('%' . $logFilterCustomerName . '%') . '\'';
+        }
+        if ($logFilterIdCart !== '' && ctype_digit($logFilterIdCart)) {
+            $logWhere[] = 'l.id_cart = ' . (int) $logFilterIdCart;
+        }
+        if ($logFilterDocType !== '') {
+            $logWhere[] = 'COALESCE(l.doc_type, \'\') LIKE \'' . pSQL('%' . $logFilterDocType . '%') . '\'';
+        }
+        if ($logFilterResult !== '') {
+            $logWhere[] = 'l.result = ' . (int) (in_array($logFilterResult, ['0', '1'], true) ? $logFilterResult : -1);
+        }
+        if ($logFilterResultMessage !== '') {
+            $logWhere[] = 'COALESCE(l.result_message, \'\') LIKE \'' . pSQL('%' . $logFilterResultMessage . '%') . '\'';
+        }
+        if ($logFilterCheckedAtFrom !== '') {
+            $logWhere[] = 'l.checked_at >= \'' . pSQL($logFilterCheckedAtFrom . ' 00:00:00') . '\'';
+        }
+        if ($logFilterCheckedAtTo !== '') {
+            $logWhere[] = 'l.checked_at <= \'' . pSQL($logFilterCheckedAtTo . ' 23:59:59') . '\'';
+        }
+
+        $logWhereSql = '';
+        if (!empty($logWhere)) {
+            $logWhereSql = ' WHERE ' . implode(' AND ', $logWhere);
+        }
+
+        $logLimit = (int) Tools::getValue($logListTable . '_pagination', 20);
+        if (!in_array($logLimit, [20, 50, 100, 300], true)) {
+            $logLimit = 20;
+        }
+        $logPage = (int) Tools::getValue('submitFilter' . $logListTable, 1);
+        if ($logPage < 1) {
+            $logPage = 1;
+        }
+
+        $logTotal = (int) Db::getInstance()->getValue(
+            'SELECT COUNT(*)
+             FROM `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '` l
+             LEFT JOIN `' . _DB_PREFIX_ . 'customer` c ON c.id_customer = l.id_customer'
+            . $logWhereSql
+        );
+
+        $logOffset = ($logPage - 1) * $logLimit;
+        if ($logOffset >= $logTotal && $logTotal > 0) {
+            $logPage = (int) ceil($logTotal / $logLimit);
+            $logOffset = ($logPage - 1) * $logLimit;
+        }
+
+        $logRows = Db::getInstance()->executeS(
+            'SELECT
+                l.id_internautenav_verification_log,
+                l.checked_at,
+                l.customer_reference,
+                c.firstname,
+                c.lastname,
+                c.email,
+                l.id_cart,
+                l.doc_type,
+                l.result,
+                l.result_message
+             FROM `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '` l
+             LEFT JOIN `' . _DB_PREFIX_ . 'customer` c ON c.id_customer = l.id_customer'
+            . $logWhereSql . '
+             ORDER BY ' . $logOrderBy . ' ' . $logOrderWay . '
+             LIMIT ' . (int) $logOffset . ', ' . (int) $logLimit
+        );
+        if (!is_array($logRows)) {
+            $logRows = [];
+        }
+
+        $orderByRaw = (string) Tools::getValue($persistListTable . 'Orderby', 'verified_at');
+        $orderWayRaw = strtoupper((string) Tools::getValue($persistListTable . 'Orderway', 'DESC'));
+        $orderColumns = [
+            'id_customer' => 'v.id_customer',
+            'fullname' => 'fullname',
+            'email' => 'c.email',
+            'doc_type' => 'v.doc_type',
+            'birth_date' => 'v.birth_date',
+            'verified_at' => 'v.verified_at',
+        ];
+        $orderBy = isset($orderColumns[$orderByRaw]) ? $orderColumns[$orderByRaw] : 'v.verified_at';
+        $orderWay = in_array($orderWayRaw, ['ASC', 'DESC'], true) ? $orderWayRaw : 'DESC';
+
+        $persistWhere = [];
         $filterIdCustomer = $readListFilter($persistListTable, 'id_customer', ['v!id_customer']);
         $filterFullname = $readListFilter($persistListTable, 'fullname');
         $filterEmail = $readListFilter($persistListTable, 'email', ['c!email']);
@@ -399,51 +502,86 @@ class Internautenav extends Module
         // --- Attempt log ---
         $output .= '<div class="panel">';
         $output .= '<h3>' . $this->l('debug_log_title') . '</h3>';
-        $output .= '<div style="overflow-x:auto">';
-        $output .= '<table class="table table-bordered table-striped" style="font-size:12px">';
-        $output .= '<thead><tr>';
-        foreach ([
-            $this->l('debug_log_col_id'),
-            $this->l('debug_log_col_timestamp'),
-            $this->l('debug_log_col_reference'),
-            $this->l('debug_log_col_customer'),
-            $this->l('debug_log_col_cart'),
-            $this->l('debug_log_col_doc'),
-            $this->l('debug_log_col_result'),
-            $this->l('debug_log_col_message'),
-        ] as $th) {
-            $output .= '<th>' . htmlspecialchars($th, ENT_QUOTES, 'UTF-8') . '</th>';
-        }
-        $output .= '</tr></thead><tbody>';
 
-        if (empty($logRows)) {
-            $output .= '<tr><td colspan="8" class="text-center text-muted">' . $this->l('debug_log_empty') . '</td></tr>';
-        }
+        $logFieldsList = [
+            'id_internautenav_verification_log' => [
+                'title' => $this->l('debug_log_col_id'),
+                'type' => 'int',
+                'align' => 'text-left',
+            ],
+            'checked_at' => [
+                'title' => $this->l('debug_log_col_timestamp'),
+                'type' => 'datetime',
+                'align' => 'text-left',
+            ],
+            'customer_reference' => [
+                'title' => $this->l('debug_log_col_reference'),
+                'type' => 'text',
+                'align' => 'text-left',
+            ],
+            'customer' => [
+                'title' => $this->l('debug_log_col_customer'),
+                'type' => 'text',
+                'align' => 'text-left',
+            ],
+            'id_cart' => [
+                'title' => $this->l('debug_log_col_cart'),
+                'type' => 'int',
+                'align' => 'text-left',
+            ],
+            'doc_type' => [
+                'title' => $this->l('debug_log_col_doc'),
+                'type' => 'text',
+                'align' => 'text-left',
+            ],
+            'result' => [
+                'title' => $this->l('debug_log_col_result'),
+                'type' => 'int',
+                'align' => 'text-left',
+            ],
+            'result_message' => [
+                'title' => $this->l('debug_log_col_message'),
+                'type' => 'text',
+                'align' => 'text-left',
+            ],
+        ];
 
+        // Prepare log rows for HelperList display
+        $logRowsForDisplay = [];
         foreach ($logRows as $row) {
             $isOk = (int) $row['result'] === 1;
-            $rowStyle = $isOk ? 'background:#dff0d8' : 'background:#f2dede';
             $customerName = trim(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? ''));
-            if ($customerName === '' && (int) ($row['id_guest'] ?? 0) > 0) {
-                $customerName = 'Guest #' . $row['id_guest'];
-            }
             $email = $row['email'] ?? '';
             $customerDisplay = $customerName . ($email ? ' <' . $email . '>' : '');
+            $resultDisplay = $isOk ? '&#10003; ' . $this->l('debug_log_result_ok') : '&#10007; ' . $this->l('debug_log_result_fail');
 
-            $output .= '<tr style="' . $rowStyle . '">';
-            $output .= $td($row['id_internautenav_verification_log']);
-            $output .= $td($row['checked_at']);
-            $output .= $td($row['customer_reference']);
-            $output .= '<td>' . htmlspecialchars($customerDisplay, ENT_QUOTES, 'UTF-8') . '</td>';
-            $output .= $td($row['id_cart'] ?? '');
-            $output .= $td($row['doc_type']);
-            $output .= '<td style="font-weight:bold">' . ($isOk ? '&#10003; ' . $this->l('debug_log_result_ok') : '&#10007; ' . $this->l('debug_log_result_fail')) . '</td>';
-            $output .= $td($row['result_message'] ?? '');
-            $output .= '</tr>';
+            $logRowsForDisplay[] = [
+                'id_internautenav_verification_log' => $row['id_internautenav_verification_log'],
+                'checked_at' => $row['checked_at'],
+                'customer_reference' => $row['customer_reference'],
+                'customer' => $customerDisplay,
+                'id_cart' => $row['id_cart'] ?? '',
+                'doc_type' => $row['doc_type'],
+                'result' => $resultDisplay,
+                'result_message' => $row['result_message'] ?? '',
+            ];
         }
 
-        $output .= '</tbody></table>';
-        $output .= '</div>';
+        $logHelper = new HelperList();
+        $logHelper->module = $this;
+        $logHelper->title = $this->l('debug_log_title');
+        $logHelper->identifier = 'id_internautenav_verification_log';
+        $logHelper->table = $logListTable;
+        $logHelper->token = $token;
+        $logHelper->currentIndex = AdminController::$currentIndex . '&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name=' . $this->name;
+        $logHelper->simple_header = false;
+        $logHelper->show_toolbar = false;
+        $logHelper->listTotal = $logTotal;
+        $logHelper->_defaultOrderBy = 'checked_at';
+        $logHelper->_defaultOrderWay = 'DESC';
+        $logHelper->no_link = true;
+
+        $output .= $logHelper->generateList($logRowsForDisplay, $logFieldsList);
         $output .= '</div>';
 
         // --- Persistent verifications (PrestaShop-like list with filter + paging) ---

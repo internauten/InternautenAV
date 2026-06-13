@@ -168,9 +168,10 @@ Beide Aktionen sind token-gesichert und erfordern eine Bestätigung via Browser-
 ### v2.1.2 (2026-06-13)
 
 - Backoffice-Liste **Gespeicherte Verifikationen** auf PrestaShop-`HelperList` mit Filter, Sortierung und Pagination umgestellt.
+- Backoffice-Liste **Verifikations-Log** ebenfalls auf `HelperList` umgestellt: Filter nach Timestamp-Bereich, Referenz, Kundennamen, Dokumenttyp, Ergebnis und Nachricht möglich.
 - Filterauslese robust gemacht (unterstützt unterschiedliche Request-Key-Varianten der `HelperList`, inkl. Alias-Felder).
-- Reset-Button der Liste korrigiert: führt jetzt auf eine saubere Modul-URL ohne Filterparameter zurück.
-- Datumsfilter `verified_at` korrigiert:
+- Reset-Button beider Listen korrigiert: führt jetzt auf eine saubere Modul-URL ohne Filterparameter zurück.
+- Datumsfilter `verified_at` und `checked_at` korrigiert:
   - `Datum ab` filtert per `>= YYYY-MM-DD 00:00:00`
   - `Datum bis` filtert per `<= YYYY-MM-DD 23:59:59`
   - damit werden bei `Datum ab` auch neuere Einträge korrekt angezeigt.
