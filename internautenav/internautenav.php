@@ -26,7 +26,7 @@ class Internautenav extends Module
     {
         $this->name = 'internautenav';
         $this->tab = 'shipping_logistics';
-        $this->version = '2.1.1';
+        $this->version = '2.1.2';
         $this->author = 'die.internauten.ch';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -150,6 +150,16 @@ class Internautenav extends Module
         );
 
         $token = Tools::getAdminTokenLite('AdminModules');
+        $persistListTable = 'internautenav_persistent';
+        if (Tools::isSubmit('submitReset' . $persistListTable)) {
+            Tools::redirectAdmin(
+                AdminController::$currentIndex
+                . '&configure=' . $this->name
+                . '&tab_module=' . $this->tab
+                . '&module_name=' . $this->name
+                . '&token=' . $token
+            );
+        }
         $action = htmlspecialchars(
             $this->context->link->getAdminLink('AdminModules', true, [], [
                 'configure' => $this->name,
@@ -215,12 +225,167 @@ class Internautenav extends Module
             $logRows = [];
         }
 
-        $persistRows = Db::getInstance()->executeS(
-            'SELECT v.*, c.firstname, c.lastname, c.email
+        $orderByRaw = (string) Tools::getValue($persistListTable . 'Orderby', 'verified_at');
+        $orderWayRaw = strtoupper((string) Tools::getValue($persistListTable . 'Orderway', 'DESC'));
+        $orderColumns = [
+            'id_customer' => 'v.id_customer',
+            'fullname' => 'fullname',
+            'email' => 'c.email',
+            'doc_type' => 'v.doc_type',
+            'birth_date' => 'v.birth_date',
+            'verified_at' => 'v.verified_at',
+        ];
+        $orderBy = isset($orderColumns[$orderByRaw]) ? $orderColumns[$orderByRaw] : 'v.verified_at';
+        $orderWay = in_array($orderWayRaw, ['ASC', 'DESC'], true) ? $orderWayRaw : 'DESC';
+
+        $persistWhere = [];
+        $listFilters = (array) Tools::getAllValues();
+        $readListFilter = static function ($table, $field, array $aliases = []) use ($listFilters) {
+            $keys = array_merge([$field], $aliases);
+            foreach ($keys as $key) {
+                $variants = [$key, str_replace('!', '_', $key), str_replace('!', '', $key)];
+                foreach ($variants as $variant) {
+                    $requestKey = $table . 'Filter_' . $variant;
+                    if (array_key_exists($requestKey, $listFilters)) {
+                        $rawValue = $listFilters[$requestKey];
+                        if (is_array($rawValue)) {
+                            $normalized = [];
+                            foreach ($rawValue as $item) {
+                                if (is_scalar($item)) {
+                                    $normalized[] = (string) $item;
+                                }
+                            }
+
+                            return trim(implode(' ', $normalized));
+                        }
+                        if (!is_scalar($rawValue) && $rawValue !== null) {
+                            return '';
+                        }
+
+                        return trim((string) $rawValue);
+                    }
+                }
+            }
+
+            return '';
+        };
+        $readListDateRange = static function ($table, $field, array $aliases = []) use ($listFilters) {
+            $keys = array_merge([$field], $aliases);
+            foreach ($keys as $key) {
+                $variants = [$key, str_replace('!', '_', $key), str_replace('!', '', $key)];
+                foreach ($variants as $variant) {
+                    $requestKey = $table . 'Filter_' . $variant;
+                    $from = '';
+                    $to = '';
+
+                    if (array_key_exists($requestKey, $listFilters) && is_array($listFilters[$requestKey])) {
+                        $rawRange = $listFilters[$requestKey];
+                        $from = isset($rawRange[0]) && is_scalar($rawRange[0]) ? trim((string) $rawRange[0]) : '';
+                        $to = isset($rawRange[1]) && is_scalar($rawRange[1]) ? trim((string) $rawRange[1]) : '';
+                    }
+
+                    $fromKey = $requestKey . '_0';
+                    $toKey = $requestKey . '_1';
+                    if (array_key_exists($fromKey, $listFilters) && is_scalar($listFilters[$fromKey])) {
+                        $from = trim((string) $listFilters[$fromKey]);
+                    }
+                    if (array_key_exists($toKey, $listFilters) && is_scalar($listFilters[$toKey])) {
+                        $to = trim((string) $listFilters[$toKey]);
+                    }
+
+                    if ($from !== '' || $to !== '') {
+                        return [$from, $to];
+                    }
+                }
+            }
+
+            return ['', ''];
+        };
+        $normalizeDateForSql = static function ($value) {
+            if ($value === '') {
+                return '';
+            }
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+                return $value;
+            }
+            if (preg_match('/^(\d{4}-\d{2}-\d{2})\s+\d{2}:\d{2}(?::\d{2})?$/', $value, $m)) {
+                return $m[1];
+            }
+
+            return '';
+        };
+
+        $filterIdCustomer = $readListFilter($persistListTable, 'id_customer', ['v!id_customer']);
+        $filterFullname = $readListFilter($persistListTable, 'fullname');
+        $filterEmail = $readListFilter($persistListTable, 'email', ['c!email']);
+        $filterDocType = $readListFilter($persistListTable, 'doc_type', ['v!doc_type']);
+        $filterBirthDate = $readListFilter($persistListTable, 'birth_date', ['v!birth_date']);
+        list($filterVerifiedAtFromRaw, $filterVerifiedAtToRaw) = $readListDateRange($persistListTable, 'verified_at', ['v!verified_at']);
+        $filterVerifiedAtFrom = $normalizeDateForSql($filterVerifiedAtFromRaw);
+        $filterVerifiedAtTo = $normalizeDateForSql($filterVerifiedAtToRaw);
+
+        if ($filterIdCustomer !== '' && ctype_digit($filterIdCustomer)) {
+            $persistWhere[] = 'v.id_customer = ' . (int) $filterIdCustomer;
+        }
+        if ($filterFullname !== '') {
+            $persistWhere[] = 'CONCAT(COALESCE(c.firstname, \'' . '\'), \'' . ' ' . '\', COALESCE(c.lastname, \'' . '\')) LIKE \'' . pSQL('%' . $filterFullname . '%') . '\'';
+        }
+        if ($filterEmail !== '') {
+            $persistWhere[] = 'COALESCE(c.email, \'' . '\') LIKE \'' . pSQL('%' . $filterEmail . '%') . '\'';
+        }
+        if ($filterDocType !== '') {
+            $persistWhere[] = 'COALESCE(v.doc_type, \'' . '\') LIKE \'' . pSQL('%' . $filterDocType . '%') . '\'';
+        }
+        if ($filterBirthDate !== '') {
+            $persistWhere[] = 'COALESCE(v.birth_date, \'' . '\') LIKE \'' . pSQL('%' . $filterBirthDate . '%') . '\'';
+        }
+        if ($filterVerifiedAtFrom !== '') {
+            $persistWhere[] = 'v.verified_at >= \'' . pSQL($filterVerifiedAtFrom . ' 00:00:00') . '\'';
+        }
+        if ($filterVerifiedAtTo !== '') {
+            $persistWhere[] = 'v.verified_at <= \'' . pSQL($filterVerifiedAtTo . ' 23:59:59') . '\'';
+        }
+
+        $persistWhereSql = '';
+        if (!empty($persistWhere)) {
+            $persistWhereSql = ' WHERE ' . implode(' AND ', $persistWhere);
+        }
+
+        $persistLimit = (int) Tools::getValue($persistListTable . '_pagination', 20);
+        if (!in_array($persistLimit, [20, 50, 100, 300], true)) {
+            $persistLimit = 20;
+        }
+        $persistPage = (int) Tools::getValue('submitFilter' . $persistListTable, 1);
+        if ($persistPage < 1) {
+            $persistPage = 1;
+        }
+
+        $persistTotal = (int) Db::getInstance()->getValue(
+            'SELECT COUNT(*)
              FROM `' . _DB_PREFIX_ . self::DB_TABLE . '` v
-             LEFT JOIN `' . _DB_PREFIX_ . 'customer` c ON c.id_customer = v.id_customer
-             ORDER BY v.verified_at DESC
-             LIMIT 100'
+             LEFT JOIN `' . _DB_PREFIX_ . 'customer` c ON c.id_customer = v.id_customer'
+            . $persistWhereSql
+        );
+
+        $persistOffset = ($persistPage - 1) * $persistLimit;
+        if ($persistOffset >= $persistTotal && $persistTotal > 0) {
+            $persistPage = (int) ceil($persistTotal / $persistLimit);
+            $persistOffset = ($persistPage - 1) * $persistLimit;
+        }
+
+        $persistRows = Db::getInstance()->executeS(
+            'SELECT
+                v.id_customer,
+                CONCAT(COALESCE(c.firstname, \'' . '\'), \'' . ' ' . '\', COALESCE(c.lastname, \'' . '\')) AS fullname,
+                COALESCE(c.email, \'' . '\') AS email,
+                v.doc_type,
+                v.birth_date,
+                v.verified_at
+             FROM `' . _DB_PREFIX_ . self::DB_TABLE . '` v
+             LEFT JOIN `' . _DB_PREFIX_ . 'customer` c ON c.id_customer = v.id_customer'
+            . $persistWhereSql . '
+             ORDER BY ' . $orderBy . ' ' . $orderWay . '
+             LIMIT ' . (int) $persistOffset . ', ' . (int) $persistLimit
         );
         if (!is_array($persistRows)) {
             $persistRows = [];
@@ -281,44 +446,59 @@ class Internautenav extends Module
         $output .= '</div>';
         $output .= '</div>';
 
-        // --- Persistent verifications ---
-        $output .= '<div class="panel">';
-        $output .= '<h3>' . $this->l('debug_persistent_title') . '</h3>';
-        $output .= '<div style="overflow-x:auto">';
-        $output .= '<table class="table table-bordered table-striped" style="font-size:12px">';
-        $output .= '<thead><tr>';
-        foreach ([
-              $this->l('debug_persistent_col_id'),
-              $this->l('debug_persistent_col_customer_id'),
-              $this->l('debug_persistent_col_name'),
-              $this->l('debug_persistent_col_email'),
-              $this->l('debug_persistent_col_doc'),
-              $this->l('debug_persistent_col_birth'),
-              $this->l('debug_persistent_col_verified'),
-        ] as $th) {
-            $output .= '<th>' . htmlspecialchars($th, ENT_QUOTES, 'UTF-8') . '</th>';
-        }
-        $output .= '</tr></thead><tbody>';
+        // --- Persistent verifications (PrestaShop-like list with filter + paging) ---
+        $persistFieldsList = [
+            'id_customer' => [
+                'title' => $this->l('debug_persistent_col_customer_id'),
+                'type' => 'int',
+                'align' => 'text-left',
+                'filter_key' => 'v!id_customer',
+            ],
+            'fullname' => [
+                'title' => $this->l('debug_persistent_col_name'),
+                'type' => 'text',
+                'align' => 'text-left',
+            ],
+            'email' => [
+                'title' => $this->l('debug_persistent_col_email'),
+                'type' => 'text',
+                'align' => 'text-left',
+            ],
+            'doc_type' => [
+                'title' => $this->l('debug_persistent_col_doc'),
+                'type' => 'text',
+                'align' => 'text-left',
+                'filter_key' => 'v!doc_type',
+            ],
+            'birth_date' => [
+                'title' => $this->l('debug_persistent_col_birth'),
+                'type' => 'text',
+                'align' => 'text-left',
+                'filter_key' => 'v!birth_date',
+            ],
+            'verified_at' => [
+                'title' => $this->l('debug_persistent_col_verified'),
+                'type' => 'datetime',
+                'align' => 'text-left',
+                'filter_key' => 'v!verified_at',
+            ],
+        ];
 
-        if (empty($persistRows)) {
-            $output .= '<tr><td colspan="7" class="text-center text-muted">' . $this->l('debug_log_empty') . '</td></tr>';
-        }
+        $persistHelper = new HelperList();
+        $persistHelper->module = $this;
+        $persistHelper->title = $this->l('debug_persistent_title');
+        $persistHelper->identifier = 'id_customer';
+        $persistHelper->table = $persistListTable;
+        $persistHelper->token = $token;
+        $persistHelper->currentIndex = AdminController::$currentIndex . '&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name=' . $this->name;
+        $persistHelper->simple_header = false;
+        $persistHelper->show_toolbar = false;
+        $persistHelper->listTotal = $persistTotal;
+        $persistHelper->_defaultOrderBy = 'verified_at';
+        $persistHelper->_defaultOrderWay = 'DESC';
+        $persistHelper->no_link = true;
 
-        foreach ($persistRows as $row) {
-            $output .= '<tr>';
-            $output .= $td($row['id_internautenav_customer_verification'] ?? $row['id'] ?? '');
-            $output .= $td($row['id_customer']);
-            $output .= $td(trim(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? '')));
-            $output .= $td($row['email'] ?? '');
-                $output .= $td($row['doc_type'] ?? '');
-                $output .= $td($row['birth_date'] ?? '');
-                $output .= $td($row['verified_at'] ?? '');
-            $output .= '</tr>';
-        }
-
-        $output .= '</tbody></table>';
-        $output .= '</div>';
-        $output .= '</div>';
+        $output .= $persistHelper->generateList($persistRows, $persistFieldsList);
 
         // --- DSGVO Upload-Cleanup Panel ---
         $lastCleanup = Configuration::get(self::CONF_LAST_UPLOAD_CLEANUP_AT);

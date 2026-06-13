@@ -159,6 +159,22 @@ In der Backoffice-Bestellansicht erscheint unterhalb der Dokumenten-Liste ein En
 
 Beide Aktionen sind token-gesichert und erfordern eine Bestätigung via Browser-Dialog.
 
+## Changelog
+
+### Unreleased
+
+- Noch keine Einträge.
+
+### v2.1.2 (2026-06-13)
+
+- Backoffice-Liste **Gespeicherte Verifikationen** auf PrestaShop-`HelperList` mit Filter, Sortierung und Pagination umgestellt.
+- Filterauslese robust gemacht (unterstützt unterschiedliche Request-Key-Varianten der `HelperList`, inkl. Alias-Felder).
+- Reset-Button der Liste korrigiert: führt jetzt auf eine saubere Modul-URL ohne Filterparameter zurück.
+- Datumsfilter `verified_at` korrigiert:
+  - `Datum ab` filtert per `>= YYYY-MM-DD 00:00:00`
+  - `Datum bis` filtert per `<= YYYY-MM-DD 23:59:59`
+  - damit werden bei `Datum ab` auch neuere Einträge korrekt angezeigt.
+
 ## Troubleshooting
 
 ### Modul wird nicht angezeigt im Checkout
