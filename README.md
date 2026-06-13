@@ -1,9 +1,11 @@
-# internautenav (PrestaShop 1.7.8+)
+# internautenav Age Verification (PrestaShop 9.1.4)
 
-[![Release on Tag](https://github.com/internauten/InternautenAV/actions/workflows/release-on-tag.yml/badge.svg)](https://github.com/internauten/InternautenAV/actions/workflows/release-on-tag.yml)
-[![Latest Release](https://img.shields.io/github/v/release/internauten/InternautenAV)](https://github.com/internauten/InternautenAV/releases)
+[![Latest Release](https://img.shields.io/github/v/release/internauten/InternautenAV?label=release)](https://github.com/internauten/InternautenAV/releases)
 
 Modul zur Alters- und Identitätsprüfung für ausgewählte Versandarten via MRZ-Scan oder Dokumenten-Upload.
+
+> [!WARNING]
+> Wurde nur mit Prestashop 9.1.4 und PHP Version 8.3.31 getestet!
 
 ## Features
 
