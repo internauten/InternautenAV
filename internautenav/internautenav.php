@@ -364,9 +364,14 @@ class Internautenav extends Module
         $cronToken = hash('sha256', _COOKIE_KEY_ . 'internautenav_cron');
         $cronUrl = (Tools::usingSecureMode() ? 'https' : 'http') . '://' . Tools::getShopDomain(false, true)
             . __PS_BASE_URI__ . 'modules/' . $this->name . '/cron.php?token=' . $cronToken;
+        $bestandskundeUrl = (Tools::usingSecureMode() ? 'https' : 'http') . '://' . Tools::getShopDomain(false, true)
+            . __PS_BASE_URI__ . 'modules/' . $this->name . '/cron.php?token=' . $cronToken . '&mode=mark_existing_customers';
         $output .= '<tr><td><strong>' . $this->l('Cron-URL') . '</strong></td>'
             . '<td><code style="word-break:break-all">' . htmlspecialchars($cronUrl, ENT_QUOTES, 'UTF-8') . '</code>'
             . '<br><small class="text-muted">' . $this->l('Taeglicher Aufruf empfohlen, z.B. via wget oder curl.') . '</small></td></tr>';
+        $output .= '<tr><td><strong>' . $this->l('Bestandskunden-URL') . '</strong></td>'
+            . '<td><code style="word-break:break-all">' . htmlspecialchars($bestandskundeUrl, ENT_QUOTES, 'UTF-8') . '</code>'
+            . '<br><small class="text-muted">' . $this->l('Markiert alle bestehenden Nicht-Gastkunden mit mindestens einer Bestellung als Bestandskunde.') . '</small></td></tr>';
         $output .= '</table>';
         $output .= '<form method="post" action="' . $cleanupAction . '" style="margin-top:12px">';
         $output .= '<button type="submit" name="submitInternautenavCleanup" class="btn btn-warning">'
@@ -963,7 +968,7 @@ class Internautenav extends Module
     }
 })();</script>';
 
-                $output .= '<div class="card mt-2" id="' . $protocolCardId . '">';
+                $output .= '<div class="col"><div class="card mt-2" id="' . $protocolCardId . '">';
         $output .= '<h3 class="card-header">' . htmlspecialchars($this->l('Alterspruefungsprotokoll', 'protocol'), ENT_QUOTES, 'UTF-8') . '</h3>';
         $output .= '<div class="card-body">';
 
@@ -1008,6 +1013,7 @@ class Internautenav extends Module
         }
 
         $output .= '</tbody></table>';
+        $output .= '</div>';
         $output .= '</div>';
         $output .= '</div>';
         $output .= '</div>';
@@ -2473,6 +2479,70 @@ document.addEventListener("keydown", function (event) {
     public function adminRejectOrderDocuments($orderId)
     {
         return $this->adminDecideOrderDocuments((int) $orderId, false);
+    }
+
+    public function markExistingCustomersAsVerified()
+    {
+        if (!$this->ensureVerificationLogTable()) {
+            return [
+                'success' => false,
+                'message' => 'Verifikations-Log-Tabelle konnte nicht erstellt werden.',
+                'created' => 0,
+                'skipped' => 0,
+                'failed' => 0,
+            ];
+        }
+
+        $rows = Db::getInstance()->executeS(
+            'SELECT DISTINCT c.id_customer, c.firstname, c.lastname
+             FROM `' . _DB_PREFIX_ . 'customer` c
+             INNER JOIN `' . _DB_PREFIX_ . 'orders` o ON o.id_customer = c.id_customer
+             LEFT JOIN `' . _DB_PREFIX_ . self::DB_TABLE . '` v ON v.id_customer = c.id_customer
+             WHERE c.id_customer > 0
+               AND c.is_guest = 0
+               AND (c.deleted = 0 OR c.deleted IS NULL)
+               AND v.id_customer IS NULL'
+        );
+
+        if (!is_array($rows)) {
+            return [
+                'success' => false,
+                'message' => 'Kunden konnten nicht geladen werden.',
+                'created' => 0,
+                'skipped' => 0,
+                'failed' => 0,
+            ];
+        }
+
+        $created = 0;
+        $failed = 0;
+        foreach ($rows as $row) {
+            $idCustomer = (int) ($row['id_customer'] ?? 0);
+            if ($idCustomer <= 0) {
+                continue;
+            }
+
+            $ok = $this->setCustomerVerified($idCustomer, [
+                'doc_type' => 'Bestandskunde',
+                'birth_date' => null,
+                'firstname' => (string) ($row['firstname'] ?? ''),
+                'lastname' => (string) ($row['lastname'] ?? ''),
+            ]);
+
+            if ($ok) {
+                $created++;
+            } else {
+                $failed++;
+            }
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Bestandskunden-Markierung abgeschlossen.',
+            'created' => $created,
+            'skipped' => 0,
+            'failed' => $failed,
+        ];
     }
 
     private function adminDecideOrderDocuments($orderId, $approved)

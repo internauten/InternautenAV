@@ -62,15 +62,20 @@ if (!defined('_COOKIE_KEY_')) {
 
 // Token aus GET-Parameter oder CLI-Argument lesen
 $token = '';
+$mode = '';
 if (PHP_SAPI === 'cli') {
     foreach (array_slice($_SERVER['argv'], 1) as $arg) {
         if (strncmp($arg, '--token=', 8) === 0) {
             $token = substr($arg, 8);
-            break;
+            continue;
+        }
+        if (strncmp($arg, '--mode=', 7) === 0) {
+            $mode = substr($arg, 7);
         }
     }
 } else {
     $token = isset($_GET['token']) ? (string) $_GET['token'] : '';
+    $mode = isset($_GET['mode']) ? (string) $_GET['mode'] : '';
 }
 
 // Token verifizieren
@@ -84,8 +89,32 @@ if (!hash_equals($expectedToken, $token)) {
 
 // Modul laden und Cleanup ausführen
 $module = Module::getInstanceByName('internautenav');
-if (!$module || !method_exists($module, 'runUploadRetentionCleanup')) {
+if (!$module) {
     exit('ERROR: Modul internautenav nicht gefunden oder nicht aktiviert.' . PHP_EOL);
+}
+
+if ($mode === 'mark_existing_customers') {
+    if (!method_exists($module, 'markExistingCustomersAsVerified')) {
+        exit('ERROR: Aktion nicht verfügbar (markExistingCustomersAsVerified).' . PHP_EOL);
+    }
+
+    $result = $module->markExistingCustomersAsVerified();
+    if (empty($result['success'])) {
+        if (PHP_SAPI !== 'cli') {
+            http_response_code(500);
+        }
+        exit('ERROR: ' . (string) ($result['message'] ?? 'Unbekannter Fehler') . PHP_EOL);
+    }
+
+    echo 'OK: ' . (string) ($result['message'] ?? 'Abgeschlossen')
+        . ' Erstellt: ' . (int) ($result['created'] ?? 0)
+        . ', Fehlgeschlagen: ' . (int) ($result['failed'] ?? 0)
+        . PHP_EOL;
+    exit;
+}
+
+if (!method_exists($module, 'runUploadRetentionCleanup')) {
+    exit('ERROR: Modulmethode runUploadRetentionCleanup nicht gefunden.' . PHP_EOL);
 }
 
 $deleted = $module->runUploadRetentionCleanup(true);
