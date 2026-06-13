@@ -4,7 +4,7 @@
 
 Modul zur Alters- und Identitätsprüfung für ausgewählte Versandarten via MRZ-Scan oder Dokumenten-Upload.
 
-> [!WARNING]
+> [!CAUTION]
 > Wurde nur mit Prestashop 9.1.4 und PHP Version 8.3.31 getestet!
 
 ## Features

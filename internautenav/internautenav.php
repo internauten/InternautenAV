@@ -26,7 +26,7 @@ class Internautenav extends Module
     {
         $this->name = 'internautenav';
         $this->tab = 'shipping_logistics';
-        $this->version = '2.1.2';
+        $this->version = '2.1.3';
         $this->author = 'die.internauten.ch';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -500,8 +500,7 @@ class Internautenav extends Module
         };
 
         // --- Attempt log ---
-        $output .= '<div class="panel">';
-        $output .= '<h3>' . $this->l('debug_log_title') . '</h3>';
+        
 
         $logFieldsList = [
             'id_internautenav_verification_log' => [
@@ -582,7 +581,7 @@ class Internautenav extends Module
         $logHelper->no_link = true;
 
         $output .= $logHelper->generateList($logRowsForDisplay, $logFieldsList);
-        $output .= '</div>';
+        
 
         // --- Persistent verifications (PrestaShop-like list with filter + paging) ---
         $persistFieldsList = [
