@@ -1,6 +1,8 @@
 # internautenav Age Verification (PrestaShop 9.1.4)
 
 [![Release on Tag](https://github.com/internauten/InternautenAV/actions/workflows/release-on-tag.yml/badge.svg)](https://github.com/internauten/InternautenAV/releases)
+[![PrestaShop](https://img.shields.io/badge/PrestaShop-9.1.4-00B8D4)](https://www.prestashop.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Modul zur Alters- und Identitätsprüfung für ausgewählte Versandarten via MRZ-Scan oder Dokumenten-Upload.
 
