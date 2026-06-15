@@ -161,11 +161,49 @@ In der Backoffice-Bestellansicht erscheint unterhalb der Dokumenten-Liste ein En
 
 Beide Aktionen sind token-gesichert und erfordern eine Bestätigung via Browser-Dialog.
 
+## Projektstruktur
+
+### Templates (`views/templates/hook/`)
+
+Die Präsentation ist vollständig von der Business-Logik getrennt. Alle Hooks rendern ihre Ausgabe über dedizierte Smarty-Templates:
+
+| Template                                                    | Hook                              | Zweck                                                      |
+| ----------------------------------------------------------- | --------------------------------- | ---------------------------------------------------------- |
+| `payment_gate.tpl`                                          | `displayPaymentTop`               | Checkout-Formular mit MRZ/Upload-Modal                     |
+| `customer_account.tpl` / `customer_account_fontawesome.tpl` | `displayCustomerAccount`          | Link zum Prüfungsprotokoll (Material Icons / Font Awesome) |
+| `admin_customers_protocol.tpl`                              | `displayAdminCustomers`           | Kundenverwaltung: Status-Badge + Prüfungsprotokoll         |
+| `order_verification_log_panel.tpl`                          | `hookDisplayAdminOrderTop`        | Bestelldetail: Verifikations-Log-Tabelle                   |
+| `admin_order_main_bottom.tpl`                               | `hookDisplayAdminOrderMainBottom` | Bestelldetail: Dokumenten-Tabelle + Preview-Modal          |
+| `backoffice_config.tpl`                                     | `getContent()`                    | Backoffice: Träger- und CMS-Seiten-Auswahl                 |
+| `backoffice_cleanup.tpl`                                    | `getContent()`                    | Backoffice: DSGVO Upload-Cleanup Panel                     |
+| `order_status_badge.tpl`                                    | `renderOrderStatusBadge()`        | Status-Badge-Rendering (Web + Admin)                       |
+| `order_status_badge_pdf.tpl`                                | `renderOrderStatusBadgeForPdf()`  | Status-Badge im PDF (Rechnung/Lieferschein)                |
+
+### Assets
+
+- **CSS:** `views/css/checkout.css`, `views/css/admin_order_main_bottom.css`
+- **JavaScript:** `views/js/checkout.js`, `views/js/admin_order_main_bottom.js`
+
+One-time Loading Flags verhindern doppelte Asset-Einbindung:
+
+- `INTERNAUTENAV_CHECKOUT_CSS_LOADED` / `INTERNAUTENAV_CHECKOUT_JS_LOADED`
+- `INTERNAUTENAV_ADMIN_ORDER_CSS_LOADED` / `INTERNAUTENAV_ADMIN_ORDER_JS_LOADED`
+
+### Datenbankschema
+
+Das Modul erstellt/verwaltet 3 Tabellen:
+
+| Tabelle                               | Zweck                                                          |
+| ------------------------------------- | -------------------------------------------------------------- |
+| `internautenav_customer_verification` | Persistierte Verifikationen (ID-Kunden) – gibt es ab 18 Jahren |
+| `internautenav_verification_log`      | Log aller Verifikationsversuche (MRZ/Upload/Manuell)           |
+| `internautenav_uploaded_documents`    | Hochgeladene Dokumente (max. 90 Tage, dann DSGVO-Cleanup)      |
+
 ## Changelog
 
 ### Unreleased
 
-- Noch keine Einträge.
+- **Refaktorierung:** Alle inline HTML/JS/CSS aus PHP-Hooks in Smarty-Templates ausgelagert (Separation of Concerns)
 
 ### v2.1.2 (2026-06-13)
 
