@@ -26,7 +26,7 @@ class Internautenav extends Module
     {
         $this->name = 'internautenav';
         $this->tab = 'shipping_logistics';
-        $this->version = '2.1.3';
+        $this->version = '3.0.0';
         $this->author = 'die.internauten.ch';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -180,46 +180,44 @@ class Internautenav extends Module
             'UTF-8'
         );
 
-        $output .= '<div class="panel">';
-        $output .= '<h3>' . $this->l('backoffice_title') . '</h3>';
-        $output .= '<p>' . $this->l('backoffice_description') . '</p>';
-        $output .= '<form method="post" action="' . $action . '">';
-        $output .= '<input type="hidden" name="token" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">';
-        $output .= '<div class="form-group">';
-        $output .= '<label>' . $this->l('backoffice_label') . '</label>';
-        $output .= '<select name="INTERNAUTENAV_REQUIRED_CARRIER_REFS[]" class="form-control" multiple size="10">';
-
+        // Prepare carriers for template
+        $carriersForTemplate = [];
         foreach ($carriers as $carrierRow) {
             $idRef = (int) $carrierRow['id_reference'];
             $idCarrier = (int) $carrierRow['id_carrier'];
             $label = sprintf('#%d / Ref %d - %s', $idCarrier, $idRef, $carrierRow['name']);
-            $selected = in_array($idRef, $current, true) ? ' selected' : '';
-            $output .= '<option value="' . $idRef . '"' . $selected . '>' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</option>';
+            $carriersForTemplate[] = [
+                'id_reference' => $idRef,
+                'label' => $label,
+            ];
         }
 
-        $output .= '</select>';
-        $output .= '<p class="help-block">' . $this->l('backoffice_help') . '</p>';
-        $output .= '</div>';
+        // Prepare CMS pages for template
         $cmsPages = CMS::listCms((int) $this->context->language->id, false, true);
         if (!is_array($cmsPages)) {
             $cmsPages = [];
         }
-        $output .= '<div class="form-group">';
-        $output .= '<label>' . $this->l('Datenschutzerklaerung (CMS-Seite)') . '</label>';
-        $output .= '<select name="INTERNAUTENAV_PRIVACY_CMS_ID" class="form-control">';
-        $output .= '<option value="0"' . ($privacyCmsId === 0 ? ' selected' : '') . '>— ' . $this->l('Modul-Beispielseite verwenden') . ' —</option>';
-        foreach ($cmsPages as $cmsPage) {
-            $cmsPageId = (int) $cmsPage['id_cms'];
-            $cmsPageTitle = htmlspecialchars((string) $cmsPage['meta_title'], ENT_QUOTES, 'UTF-8');
-            $sel = ($privacyCmsId === $cmsPageId) ? ' selected' : '';
-            $output .= '<option value="' . $cmsPageId . '"' . $sel . '>#' . $cmsPageId . ' – ' . $cmsPageTitle . '</option>';
-        }
-        $output .= '</select>';
-        $output .= '<p class="help-block"><strong>' . $this->l('Status') . ':</strong> <span class="' . $privacyCmsStatusClass . '">' . htmlspecialchars($privacyCmsStatusMessage, ENT_QUOTES, 'UTF-8') . '</span></p>';
-        $output .= '</div>';
-        $output .= '<button type="submit" name="submitInternautenavConfig" class="btn btn-primary">' . $this->l('backoffice_save_button') . '</button>';
-        $output .= '</form>';
-        $output .= '</div>';
+
+        $this->context->smarty->assign([
+            'internautenav_backoffice_title' => $this->l('backoffice_title'),
+            'internautenav_backoffice_description' => $this->l('backoffice_description'),
+            'internautenav_form_action' => $action,
+            'internautenav_form_token' => $token,
+            'internautenav_carriers' => $carriersForTemplate,
+            'internautenav_selected_refs' => $current,
+            'internautenav_backoffice_label' => $this->l('backoffice_label'),
+            'internautenav_backoffice_help' => $this->l('backoffice_help'),
+            'internautenav_privacy_cms_label' => $this->l('Datenschutzerklaerung (CMS-Seite)'),
+            'internautenav_privacy_cms_id' => $privacyCmsId,
+            'internautenav_cms_pages' => $cmsPages,
+            'internautenav_privacy_default_label' => $this->l('Modul-Beispielseite verwenden'),
+            'internautenav_privacy_cms_status_class' => $privacyCmsStatusClass,
+            'internautenav_privacy_cms_status_message' => $privacyCmsStatusMessage,
+            'internautenav_status_label' => $this->l('Status'),
+            'internautenav_save_button' => $this->l('backoffice_save_button'),
+        ]);
+
+        $output .= $this->display(__FILE__, 'views/templates/hook/backoffice_config.tpl');
 
         // --- Shared filter helper functions ---
         $listFilters = (array) Tools::getAllValues();
@@ -494,13 +492,8 @@ class Internautenav extends Module
             $persistRows = [];
         }
 
-        // Helper to emit a td safely
-        $td = static function ($val, $extra = '') {
-            return '<td' . ($extra ? ' ' . $extra : '') . '>' . htmlspecialchars((string) $val, ENT_QUOTES, 'UTF-8') . '</td>';
-        };
-
         // --- Attempt log ---
-        
+
 
         $logFieldsList = [
             'id_internautenav_verification_log' => [
@@ -670,44 +663,41 @@ class Internautenav extends Module
             'UTF-8'
         );
 
-        $output .= '<div class="panel">';
-        $output .= '<h3>' . $this->l('DSGVO Upload-Cleanup') . '</h3>';
-        $output .= '<table class="table" style="font-size:13px;max-width:500px">';
-        $output .= '<tr><td><strong>' . $this->l('Aufbewahrungsfrist') . '</strong></td><td>' . self::UPLOAD_RETENTION_DAYS . ' ' . $this->l('Tage') . '</td></tr>';
-        $output .= '<tr><td><strong>' . $this->l('Letzter Cleanup') . '</strong></td><td>' . htmlspecialchars($lastCleanupDisplay, ENT_QUOTES, 'UTF-8') . '</td></tr>';
-        $output .= '<tr><td><strong>' . $this->l('Ausstehende Uploads (nicht abgeschlossen, gesamt)') . '</strong></td><td>' . $pendingCount . '</td></tr>';
-        $output .= '<tr><td><strong>' . $this->l('Davon ohne Bestellung') . '</strong></td><td>' . $pendingUnassignedCount . '</td></tr>';
-        $output .= '<tr><td><strong>' . $this->l('Abgelaufene Eintraege') . '</strong></td><td>' . $expiredCount . '</td></tr>';
+        // Prepare Cron URLs
         $cronToken = hash('sha256', _COOKIE_KEY_ . 'internautenav_cron');
         $cronUrl = (Tools::usingSecureMode() ? 'https' : 'http') . '://' . Tools::getShopDomain(false, true)
             . __PS_BASE_URI__ . 'modules/' . $this->name . '/cron.php?token=' . $cronToken;
         $bestandskundeUrl = (Tools::usingSecureMode() ? 'https' : 'http') . '://' . Tools::getShopDomain(false, true)
             . __PS_BASE_URI__ . 'modules/' . $this->name . '/cron.php?token=' . $cronToken . '&mode=mark_existing_customers';
-        $output .= '<tr><td><strong>' . $this->l('Cron-URL') . '</strong></td>'
-            . '<td><code style="word-break:break-all">' . htmlspecialchars($cronUrl, ENT_QUOTES, 'UTF-8') . '</code>'
-            . '<br><small class="text-muted">' . $this->l('Taeglicher Aufruf empfohlen, z.B. via wget oder curl.') . '</small></td></tr>';
-        $output .= '<tr><td><strong>' . $this->l('Bestandskunden-URL') . '</strong></td>'
-            . '<td><code style="word-break:break-all">' . htmlspecialchars($bestandskundeUrl, ENT_QUOTES, 'UTF-8') . '</code>'
-            . '<br><small class="text-muted">' . $this->l('Markiert alle bestehenden Nicht-Gastkunden mit mindestens einer Bestellung als Bestandskunde.') . '</small></td></tr>';
-        $output .= '</table>';
-        $output .= '<form method="post" action="' . $cleanupAction . '" style="margin-top:12px">';
-        $output .= '<button type="submit" name="submitInternautenavCleanup" class="btn btn-warning">'
-            . $this->l('Cleanup jetzt ausfuehren')
-            . '</button>';
-        $output .= ' <span class="help-block" style="display:inline-block;margin-left:8px">'
-            . sprintf($this->l('Loescht alle Uploads aelter als %d Tage.'), self::UPLOAD_RETENTION_DAYS)
-            . '</span>';
-        $output .= '</form>';
-        $output .= '<form method="post" action="' . $cleanupAction . '" style="margin-top:8px"'
-            . ' onsubmit="return confirm(\'' . $this->l('Wirklich alle Dateien ohne abgeschlossene Altersprüfung löschen?') . '\')">';
-        $output .= '<button type="submit" name="submitInternautenavCleanupPending" class="btn btn-danger">'
-            . $this->l('Alle Dateien ohne Altersprüfung löschen')
-            . '</button>';
-        $output .= ' <span class="help-block" style="display:inline-block;margin-left:8px">'
-            . $this->l('Loescht alle Uploads die keiner abgeschlossenen Bestellung zugeordnet sind.')
-            . '</span>';
-        $output .= '</form>';
-        $output .= '</div>';
+
+        $this->context->smarty->assign([
+            'internautenav_cleanup_title' => $this->l('DSGVO Upload-Cleanup'),
+            'internautenav_cleanup_retention_days_label' => $this->l('Aufbewahrungsfrist'),
+            'internautenav_upload_retention_days' => self::UPLOAD_RETENTION_DAYS,
+            'internautenav_days_label' => $this->l('Tage'),
+            'internautenav_cleanup_last_run_label' => $this->l('Letzter Cleanup'),
+            'internautenav_last_cleanup_display' => $lastCleanupDisplay,
+            'internautenav_cleanup_pending_total_label' => $this->l('Ausstehende Uploads (nicht abgeschlossen, gesamt)'),
+            'internautenav_pending_count' => $pendingCount,
+            'internautenav_cleanup_pending_unassigned_label' => $this->l('Davon ohne Bestellung'),
+            'internautenav_pending_unassigned_count' => $pendingUnassignedCount,
+            'internautenav_cleanup_expired_label' => $this->l('Abgelaufene Eintraege'),
+            'internautenav_expired_count' => $expiredCount,
+            'internautenav_cron_url_label' => $this->l('Cron-URL'),
+            'internautenav_cron_url' => $cronUrl,
+            'internautenav_cron_url_help' => $this->l('Taeglicher Aufruf empfohlen, z.B. via wget oder curl.'),
+            'internautenav_existing_customers_url_label' => $this->l('Bestandskunden-URL'),
+            'internautenav_existing_customers_url' => $bestandskundeUrl,
+            'internautenav_existing_customers_url_help' => $this->l('Markiert alle bestehenden Nicht-Gastkunden mit mindestens einer Bestellung als Bestandskunde.'),
+            'internautenav_cleanup_action' => $cleanupAction,
+            'internautenav_cleanup_now_button' => $this->l('Cleanup jetzt ausfuehren'),
+            'internautenav_cleanup_now_help' => sprintf($this->l('Loescht alle Uploads aelter als %d Tage.'), self::UPLOAD_RETENTION_DAYS),
+            'internautenav_cleanup_pending_button' => $this->l('Alle Dateien ohne Altersprüfung löschen'),
+            'internautenav_cleanup_pending_help' => $this->l('Loescht alle Uploads die keiner abgeschlossenen Bestellung zugeordnet sind.'),
+            'internautenav_cleanup_pending_confirm' => $this->l('Wirklich alle Dateien ohne abgeschlossene Altersprüfung löschen?'),
+        ]);
+
+        $output .= $this->display(__FILE__, 'views/templates/hook/backoffice_cleanup.tpl');
 
         return $output;
     }
@@ -1197,7 +1187,11 @@ class Internautenav extends Module
             $badgeHtml
         );
 
-        return '<div style="margin:8px 0 10px;">' . $badgeHtml . '</div>';
+        $this->context->smarty->assign([
+            'internautenav_pdf_badge_content' => $badgeHtml,
+        ]);
+
+        return $this->display(__FILE__, 'views/templates/hook/order_status_badge_pdf.tpl');
     }
 
     private function resolveOrderFromPdfObject($object)
@@ -1231,12 +1225,13 @@ class Internautenav extends Module
 
         $url = $this->context->link->getModuleLink($this->name, 'protocol', [], true);
 
-        return '<a class="account-menu__link " href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '" title="' . htmlspecialchars($this->l('Alterspruefungsprotokoll'), ENT_QUOTES, 'UTF-8') . '">'
-            . '<span class="link-item">'
-            . '<i class="material-icons">assignment</i>'
-            . '<span>' . htmlspecialchars($this->l('Alterspruefungsprotokoll'), ENT_QUOTES, 'UTF-8') . '</span>'
-            . '</span>'
-            . '</a>';
+        $this->context->smarty->assign([
+            'internautenav_account_url' => $url,
+            'internautenav_account_title' => $this->l('Alterspruefungsprotokoll'),
+            'internautenav_account_label' => $this->l('Alterspruefungsprotokoll'),
+        ]);
+
+        return $this->display(__FILE__, 'views/templates/hook/customer_account.tpl');
     }
 
     public function hookDisplayAdminCustomers($params)
@@ -1249,66 +1244,9 @@ class Internautenav extends Module
         $rows = $this->getCustomerVerificationProtocol($idCustomer, 200);
         $statusBadge = $this->renderCustomerVerificationStatusBadge($idCustomer, $rows);
 
-        $badgeId = 'internautenav-customer-status-badge';
-        $inlineBadge = '<div id="' . $badgeId . '" style="margin-bottom:8px">' . $statusBadge . '</div>';
-
-        $output = $inlineBadge;
-                $protocolCardId = 'internautenav-protocol-card';
-                $output .= '<script>(function(){
-    function inav_moveBadge() {
-        var badge = document.getElementById("' . $badgeId . '");
-        if (!badge) return;
-        // Search in main content area; fall back to body
-        var contentSelectors = ["#content", "#main", "main", "#main-div", ".page-body", "body"];
-        var content = null;
-        for (var c = 0; c < contentSelectors.length; c++) {
-            content = document.querySelector(contentSelectors[c]);
-            if (content) break;
-        }
-        // Find first card that is neither our protocol card nor contains the badge already
-        var cards = (content || document.body).querySelectorAll(".card");
-        for (var i = 0; i < cards.length; i++) {
-            var card = cards[i];
-            if (card.id === "' . $protocolCardId . '") continue;
-            if (card.contains(badge)) continue;
-            var body = card.querySelector(".card-body");
-            if (body) {
-                body.insertBefore(badge, body.firstChild);
-                return;
-            }
-        }
-    }
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", inav_moveBadge);
-    } else {
-        inav_moveBadge();
-    }
-})();</script>';
-
-                $output .= '<div class="col"><div class="card mt-2" id="' . $protocolCardId . '">';
-        $output .= '<h3 class="card-header">' . htmlspecialchars($this->l('Alterspruefungsprotokoll', 'protocol'), ENT_QUOTES, 'UTF-8') . '</h3>';
-        $output .= '<div class="card-body">';
-
-        if (empty($rows)) {
-            $output .= '<p class="text-muted mb-0">' . htmlspecialchars($this->l('Keine Eintraege.'), ENT_QUOTES, 'UTF-8') . '</p>';
-            $output .= '</div></div>';
-
-            return $output;
-        }
-
-        $output .= '<div class="table-responsive">';
-        $output .= '<table class="table table-striped table-bordered">';
-        $output .= '<thead><tr>';
-        $output .= '<th>' . htmlspecialchars($this->l('Zeitpunkt'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '<th>' . htmlspecialchars($this->l('id_cart'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '<th>' . htmlspecialchars($this->l('Dokumenttyp'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '<th>' . htmlspecialchars($this->l('Ergebnis'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '<th>' . htmlspecialchars($this->l('Meldung'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '</tr></thead><tbody>';
-
+        $protocolRows = [];
         foreach ($rows as $row) {
             $message = (string) ($row['result_message'] ?? '');
-            $isOk = (int) ($row['result'] ?? 0) === 1;
             $docType = (string) ($row['doc_type'] ?? '');
             if (strpos($message, 'Manuelle Prüfung') !== false) {
                 $docType = 'Manuell';
@@ -1316,26 +1254,32 @@ class Internautenav extends Module
                 $docType = ucfirst($docType);
             }
 
-            $resultLabel = $isOk
-                ? '&#10003; ' . htmlspecialchars($this->l('OK'), ENT_QUOTES, 'UTF-8')
-                : '&#10007; ' . htmlspecialchars($this->l('Fehler'), ENT_QUOTES, 'UTF-8');
-
-            $output .= '<tr>';
-            $output .= '<td>' . htmlspecialchars((string) ($row['checked_at'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
-            $output .= '<td>' . htmlspecialchars((string) ($row['id_cart'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
-            $output .= '<td>' . htmlspecialchars($docType, ENT_QUOTES, 'UTF-8') . '</td>';
-            $output .= '<td>' . $resultLabel . '</td>';
-            $output .= '<td>' . htmlspecialchars($message, ENT_QUOTES, 'UTF-8') . '</td>';
-            $output .= '</tr>';
+            $protocolRows[] = [
+                'checked_at' => (string) ($row['checked_at'] ?? ''),
+                'id_cart' => (string) ($row['id_cart'] ?? ''),
+                'doc_type' => $docType,
+                'is_ok' => (int) ($row['result'] ?? 0) === 1,
+                'message' => $message,
+            ];
         }
 
-        $output .= '</tbody></table>';
-        $output .= '</div>';
-        $output .= '</div>';
-        $output .= '</div>';
-        $output .= '</div>';
+        $this->context->smarty->assign([
+            'internautenav_status_badge_html' => $statusBadge,
+            'internautenav_badge_id' => 'internautenav-customer-status-badge',
+            'internautenav_protocol_card_id' => 'internautenav-protocol-card',
+            'internautenav_protocol_title' => $this->l('Alterspruefungsprotokoll', 'protocol'),
+            'internautenav_protocol_empty' => $this->l('Keine Eintraege.'),
+            'internautenav_protocol_col_checked_at' => $this->l('Zeitpunkt'),
+            'internautenav_protocol_col_id_cart' => $this->l('id_cart'),
+            'internautenav_protocol_col_doc_type' => $this->l('Dokumenttyp'),
+            'internautenav_protocol_col_result' => $this->l('Ergebnis'),
+            'internautenav_protocol_col_message' => $this->l('Meldung'),
+            'internautenav_protocol_ok' => $this->l('OK'),
+            'internautenav_protocol_fail' => $this->l('Fehler'),
+            'internautenav_protocol_rows' => $protocolRows,
+        ]);
 
-        return $output;
+        return $this->display(__FILE__, 'views/templates/hook/admin_customers_protocol.tpl');
     }
 
     private function renderOrderVerificationLogPanel($idOrder, Order $order)
@@ -1360,59 +1304,40 @@ class Internautenav extends Module
              WHERE ' . $logCondition . '
              ORDER BY checked_at DESC'
         );
-        if (!is_array($logRows) || empty($logRows)) {
-            $output = '<div class="card mt-2">';
-            $output .= '<div class="card-header">';
-            $output .= '<h3>' . htmlspecialchars($this->l('Altersprüfung – Protokoll'), ENT_QUOTES, 'UTF-8') . '</h3>';
-            $output .= '</div>';
-            $output .= '<div class="card-body">';
-            $output .= '<p class="text-muted">' . htmlspecialchars($this->l('Keine Eintraege.'), ENT_QUOTES, 'UTF-8') . '</p>';
-            $output .= '</div>';
-            $output .= '</div>';
+        $protocolRows = [];
+        if (is_array($logRows)) {
+            foreach ($logRows as $row) {
+                $docType = (string) ($row['doc_type'] ?? '');
+                $message = (string) ($row['result_message'] ?? '');
 
-            return $output;
-        }
+                if (strpos($message, 'Manuelle Prüfung') !== false) {
+                    $docType = 'Manuell';
+                } elseif ($docType !== '') {
+                    $docType = ucfirst($docType);
+                }
 
-        $output = '<div class="card mt-2">';
-        $output .= '<div class="card-header">';
-        $output .= '<h3>' . htmlspecialchars($this->l('Altersprüfung – Protokoll'), ENT_QUOTES, 'UTF-8') . '</h3>';
-        $output .= '</div>';
-        $output .= '<div class="card-body">';
-        $output .= '<div class="table-responsive">';
-        $output .= '<table class="table table-hover">';
-        $output .= '<thead><tr>';
-        $output .= '<th>' . htmlspecialchars($this->l('Zeitpunkt'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '<th>' . htmlspecialchars($this->l('Dokumenttyp'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '<th>' . htmlspecialchars($this->l('Ergebnis'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '<th>' . htmlspecialchars($this->l('Meldung'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '</tr></thead><tbody>';
-
-        foreach ($logRows as $row) {
-            $isOk = (int) ($row['result'] ?? 0) === 1;
-            $resultLabel = $isOk
-                ? '&#10003; ' . htmlspecialchars($this->l('OK'), ENT_QUOTES, 'UTF-8')
-                : '&#10007; ' . htmlspecialchars($this->l('Fehler'), ENT_QUOTES, 'UTF-8');
-            $docType = (string) ($row['doc_type'] ?? '');
-            if (strpos((string) ($row['result_message'] ?? ''), 'Manuelle Prüfung') !== false) {
-                $docType = 'Manuell';
-            } elseif ($docType !== '') {
-                $docType = ucfirst($docType);
+                $protocolRows[] = [
+                    'checked_at' => (string) ($row['checked_at'] ?? ''),
+                    'doc_type' => $docType,
+                    'is_ok' => (int) ($row['result'] ?? 0) === 1,
+                    'message' => $message,
+                ];
             }
-
-            $output .= '<tr>';
-            $output .= '<td>' . htmlspecialchars((string) ($row['checked_at'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
-            $output .= '<td>' . htmlspecialchars($docType, ENT_QUOTES, 'UTF-8') . '</td>';
-            $output .= '<td>' . $resultLabel . '</td>';
-            $output .= '<td>' . htmlspecialchars((string) ($row['result_message'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
-            $output .= '</tr>';
         }
 
-        $output .= '</tbody></table>';
-        $output .= '</div>';
-        $output .= '</div>';
-        $output .= '</div>';
+        $this->context->smarty->assign([
+            'internautenav_order_protocol_title' => $this->l('Altersprüfung – Protokoll'),
+            'internautenav_order_protocol_empty' => $this->l('Keine Eintraege.'),
+            'internautenav_order_protocol_col_checked_at' => $this->l('Zeitpunkt'),
+            'internautenav_order_protocol_col_doc_type' => $this->l('Dokumenttyp'),
+            'internautenav_order_protocol_col_result' => $this->l('Ergebnis'),
+            'internautenav_order_protocol_col_message' => $this->l('Meldung'),
+            'internautenav_order_protocol_ok' => $this->l('OK'),
+            'internautenav_order_protocol_fail' => $this->l('Fehler'),
+            'internautenav_order_protocol_rows' => $protocolRows,
+        ]);
 
-        return $output;
+        return $this->display(__FILE__, 'views/templates/hook/order_verification_log_panel.tpl');
     }
 
     public function getCustomerVerificationProtocol($idCustomer, $limit = 100)
@@ -1523,14 +1448,15 @@ class Internautenav extends Module
         $bg    = $backgrounds[$type] ?? $backgrounds['default'];
         $border = $borders[$type] ?? $borders['default'];
 
-        $out = '<div style="margin:8px 0 4px;padding:10px 14px;border:1px solid ' . $border . ';border-radius:4px;background:' . $bg . ';color:' . $color . ';font-size:13px">';
-        $out .= '<strong>' . $label . '</strong>';
-        if ($detail !== '') {
-            $out .= ' &nbsp;<span style="font-weight:normal;font-size:12px">' . $detail . '</span>';
-        }
-        $out .= '</div>';
+        $this->context->smarty->assign([
+            'internautenav_badge_color' => $color,
+            'internautenav_badge_bg' => $bg,
+            'internautenav_badge_border' => $border,
+            'internautenav_badge_label' => $label,
+            'internautenav_badge_detail' => $detail,
+        ]);
 
-        return $out;
+        return $this->display(__FILE__, 'views/templates/hook/order_status_badge.tpl');
     }
 
     public function hookDisplayAdminOrderMainBottom($params)
@@ -1552,33 +1478,7 @@ class Internautenav extends Module
 
         $rows = $this->getUploadedDocumentsByOrder($idOrder);
 
-        $output = '<div class="card mt-2">';
-        $output .= '<div class="card-header">'
-            . '<h3>' . htmlspecialchars($this->l('Altersprüfung – Hochgeladene Dokumente'), ENT_QUOTES, 'UTF-8') . '</h3>'
-            . '</div>';
-        $output .= '<div class="card-body">';
-
-        if (empty($rows)) {
-            $output .= '<p class="text-muted">'
-                . htmlspecialchars($this->l('Zu dieser Bestellung liegen keine hochgeladenen Dokumente vor.'), ENT_QUOTES, 'UTF-8')
-                . '</p>';
-            $output .= '</div></div>';
-
-            return $protocolPanel . $output;
-        }
-
-        $output .= '<div class="table-responsive">';
-        $output .= '<table class="table table-hover">';
-        $output .= '<thead><tr>';
-        $output .= '<th>' . htmlspecialchars($this->l('ID'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '<th>' . htmlspecialchars($this->l('Originaldatei'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '<th>' . htmlspecialchars($this->l('Typ'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '<th>' . htmlspecialchars($this->l('MIME'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '<th>' . htmlspecialchars($this->l('Grösse'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '<th>' . htmlspecialchars($this->l('Hochgeladen am'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '<th>' . htmlspecialchars($this->l('Aktion'), ENT_QUOTES, 'UTF-8') . '</th>';
-        $output .= '</tr></thead><tbody>';
-
+        $documentRows = [];
         foreach ($rows as $row) {
             $docId = (int) $row['id_internautenav_uploaded_document'];
             $dlToken = hash('sha256', _COOKIE_KEY_ . 'internautenav_dl' . $docId . $idOrder);
@@ -1587,142 +1487,65 @@ class Internautenav extends Module
                 . '&id_order=' . (int) $idOrder
                 . '&token=' . rawurlencode($dlToken);
 
-            $output .= '<tr>';
-            $output .= '<td>' . $docId . '</td>';
-            $output .= '<td>' . htmlspecialchars((string) $row['original_name'], ENT_QUOTES, 'UTF-8') . '</td>';
-            $output .= '<td><span class="badge">' . htmlspecialchars((string) $row['doc_type'], ENT_QUOTES, 'UTF-8') . '</span></td>';
-            $output .= '<td><small class="text-muted">' . htmlspecialchars((string) $row['mime_type'], ENT_QUOTES, 'UTF-8') . '</small></td>';
-            $output .= '<td>' . htmlspecialchars($this->formatFileSize((int) $row['file_size']), ENT_QUOTES, 'UTF-8') . '</td>';
-            $output .= '<td>' . htmlspecialchars((string) $row['created_at'], ENT_QUOTES, 'UTF-8') . '</td>';
-            $output .= '<td>'
-                . '<button type="button" class="btn btn-default btn-xs js-internautenav-preview"'
-                . ' data-preview-url="' . htmlspecialchars($downloadUrl, ENT_QUOTES, 'UTF-8') . '"'
-                . ' data-file-name="' . htmlspecialchars((string) $row['original_name'], ENT_QUOTES, 'UTF-8') . '">'
-                . '<i class="icon-eye"></i> ' . htmlspecialchars($this->l('Ansehen'), ENT_QUOTES, 'UTF-8')
-                . '</button></td>';
-            $output .= '</tr>';
+            $documentRows[] = [
+                'id' => $docId,
+                'original_name' => (string) ($row['original_name'] ?? ''),
+                'doc_type' => (string) ($row['doc_type'] ?? ''),
+                'mime_type' => (string) ($row['mime_type'] ?? ''),
+                'file_size' => $this->formatFileSize((int) ($row['file_size'] ?? 0)),
+                'created_at' => (string) ($row['created_at'] ?? ''),
+                'preview_url' => $downloadUrl,
+            ];
         }
-
-        $output .= '</tbody></table>';
-        $output .= '</div>';
-        $output .= '</div>';
 
         $adminToken = hash('sha256', _COOKIE_KEY_ . 'internautenav_admin_action' . $idOrder);
-        $ajaxUrl = htmlspecialchars(__PS_BASE_URI__ . 'modules/' . $this->name . '/ajax.php', ENT_QUOTES, 'UTF-8');
-        $output .= '<div id="internautenav-preview-modal-' . (int) $idOrder . '" class="internautenav-admin-modal" style="display:none;position:fixed;z-index:20000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.65);">';
-        $output .= '<div class="internautenav-admin-modal-dialog" style="position:relative;max-width:980px;margin:4vh auto;background:#fff;border-radius:6px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:14px 14px 12px;">';
-        $output .= '<button type="button" class="btn btn-link js-internautenav-modal-close" style="position:absolute;right:10px;top:6px;font-size:24px;line-height:1;text-decoration:none;">&times;</button>';
-        $output .= '<h4 style="margin:0 0 8px;">' . htmlspecialchars($this->l('Dokumentvorschau'), ENT_QUOTES, 'UTF-8') . '</h4>';
-        $output .= '<div id="internautenav-preview-filename-' . (int) $idOrder . '" class="text-muted" style="margin-bottom:8px;font-size:12px;"></div>';
-        $output .= '<div style="text-align:center;max-height:68vh;overflow:auto;border:1px solid #ddd;background:#fafafa;">';
-        $output .= '<img id="internautenav-preview-image-' . (int) $idOrder . '" src="" alt="' . htmlspecialchars($this->l('Dokumentvorschau'), ENT_QUOTES, 'UTF-8') . '" style="max-width:100%;max-height:66vh;display:block;margin:0 auto;">';
-        $output .= '</div>';
-        $output .= '<div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">';
-        $output .= '<button type="button" class="btn btn-success btn-sm js-internautenav-modal-action" data-action="approve" data-order-id="' . (int) $idOrder . '" data-token="' . $adminToken . '" data-ajax-url="' . $ajaxUrl . '">'
-            . '<i class="icon-ok"></i> ' . htmlspecialchars($this->l('Pruefung bestanden'), ENT_QUOTES, 'UTF-8')
-            . '</button>';
-        $output .= '<button type="button" class="btn btn-danger btn-sm js-internautenav-modal-action" data-action="reject" data-order-id="' . (int) $idOrder . '" data-token="' . $adminToken . '" data-ajax-url="' . $ajaxUrl . '">'
-            . '<i class="icon-remove"></i> ' . htmlspecialchars($this->l('Pruefung abgelehnt'), ENT_QUOTES, 'UTF-8')
-            . '</button>';
-        $output .= '<button type="button" class="btn btn-default btn-sm js-internautenav-modal-close">' . htmlspecialchars($this->l('Schliessen'), ENT_QUOTES, 'UTF-8') . '</button>';
-        $output .= '<span class="text-muted" style="margin-left:8px;font-size:11px"><i class="icon-shield"></i> '
-            . htmlspecialchars($this->l('Loescht alle Dokumente DSGVO-konform sofort.'), ENT_QUOTES, 'UTF-8')
-            . '</span>';
-        $output .= '</div>';
-        $output .= '</div>';
-        $output .= '</div>';
-
+        $ajaxUrl = __PS_BASE_URI__ . 'modules/' . $this->name . '/ajax.php';
+        $loadAdminScript = false;
         if (!defined('INTERNAUTENAV_ADMIN_JS_LOADED')) {
             define('INTERNAUTENAV_ADMIN_JS_LOADED', true);
-            $output .= '<script>
-function internautenavAdminAction(action, orderId, token, ajaxUrl) {
-    var labels = {
-        approve: { confirm: "Prüfung als bestanden markieren und alle Dokumente DSGVO-konform löschen?", ok: "Prüfung bestanden gespeichert. Dokumente gelöscht." },
-        reject:  { confirm: "Prüfung als abgelehnt markieren und alle Dokumente DSGVO-konform löschen?", ok: "Prüfung abgelehnt gespeichert. Dokumente gelöscht." }
-    };
-    if (!confirm(labels[action].confirm)) { return; }
-    var params = new URLSearchParams();
-    params.append("action", "admin_" + action + "_documents");
-    params.append("id_order", orderId);
-    params.append("token", token);
-    fetch(ajaxUrl, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params.toString() })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.success) { alert(data.message || labels[action].ok); location.reload(); }
-            else { alert("Fehler: " + (data.message || "Unbekannter Fehler")); }
-        })
-        .catch(function() { alert("Verbindungsfehler beim Speichern der Entscheidung."); });
-}
-
-function internautenavOpenPreviewModal(orderId, imageUrl, fileName) {
-    var modal = document.getElementById("internautenav-preview-modal-" + orderId);
-    var image = document.getElementById("internautenav-preview-image-" + orderId);
-    var nameNode = document.getElementById("internautenav-preview-filename-" + orderId);
-    if (!modal || !image || !nameNode) { return; }
-    image.setAttribute("src", imageUrl || "");
-    nameNode.textContent = fileName || "";
-    modal.style.display = "block";
-}
-
-function internautenavClosePreviewModal(orderId) {
-    var modal = document.getElementById("internautenav-preview-modal-" + orderId);
-    var image = document.getElementById("internautenav-preview-image-" + orderId);
-    if (!modal) { return; }
-    modal.style.display = "none";
-    if (image) {
-        image.setAttribute("src", "");
-    }
-}
-
-document.addEventListener("click", function (event) {
-    var previewBtn = event.target.closest(".js-internautenav-preview");
-    if (previewBtn) {
-        event.preventDefault();
-        var modal = previewBtn.closest(".card").querySelector("[id^=\"internautenav-preview-modal-\"]");
-        if (!modal) { return; }
-        var orderId = (modal.id || "").replace("internautenav-preview-modal-", "");
-        internautenavOpenPreviewModal(orderId, previewBtn.getAttribute("data-preview-url") || "", previewBtn.getAttribute("data-file-name") || "");
-        return;
-    }
-
-    var closeBtn = event.target.closest(".js-internautenav-modal-close");
-    if (closeBtn) {
-        event.preventDefault();
-        var closeModal = closeBtn.closest("[id^=\"internautenav-preview-modal-\"]");
-        if (!closeModal) { return; }
-        var closeOrderId = (closeModal.id || "").replace("internautenav-preview-modal-", "");
-        internautenavClosePreviewModal(closeOrderId);
-        return;
-    }
-
-    var actionBtn = event.target.closest(".js-internautenav-modal-action");
-    if (actionBtn) {
-        event.preventDefault();
-        var action = actionBtn.getAttribute("data-action") || "";
-        var orderId = parseInt(actionBtn.getAttribute("data-order-id") || "0", 10);
-        var token = actionBtn.getAttribute("data-token") || "";
-        var ajaxUrl = actionBtn.getAttribute("data-ajax-url") || "";
-        if (!action || !orderId || !token || !ajaxUrl) { return; }
-        internautenavAdminAction(action, orderId, token, ajaxUrl);
-    }
-});
-
-document.addEventListener("keydown", function (event) {
-    if (event.key !== "Escape") { return; }
-    var openModals = document.querySelectorAll("[id^=\"internautenav-preview-modal-\"]");
-    for (var i = 0; i < openModals.length; i++) {
-        if (openModals[i].style.display === "block") {
-            var orderId = (openModals[i].id || "").replace("internautenav-preview-modal-", "");
-            internautenavClosePreviewModal(orderId);
+            $loadAdminScript = true;
         }
-    }
-});
-</script>';
+        $loadAdminCss = false;
+        if (!defined('INTERNAUTENAV_ADMIN_CSS_LOADED')) {
+            define('INTERNAUTENAV_ADMIN_CSS_LOADED', true);
+            $loadAdminCss = true;
         }
 
-        $output .= '</div>';
+        $this->context->smarty->assign([
+            'internautenav_order_protocol_panel_html' => $protocolPanel,
+            'internautenav_uploaded_documents_title' => $this->l('Altersprüfung – Hochgeladene Dokumente'),
+            'internautenav_uploaded_documents_empty' => $this->l('Zu dieser Bestellung liegen keine hochgeladenen Dokumente vor.'),
+            'internautenav_uploaded_documents_col_id' => $this->l('ID'),
+            'internautenav_uploaded_documents_col_name' => $this->l('Originaldatei'),
+            'internautenav_uploaded_documents_col_type' => $this->l('Typ'),
+            'internautenav_uploaded_documents_col_mime' => $this->l('MIME'),
+            'internautenav_uploaded_documents_col_size' => $this->l('Grösse'),
+            'internautenav_uploaded_documents_col_created_at' => $this->l('Hochgeladen am'),
+            'internautenav_uploaded_documents_col_action' => $this->l('Aktion'),
+            'internautenav_uploaded_documents_preview' => $this->l('Ansehen'),
+            'internautenav_uploaded_documents_rows' => $documentRows,
+            'internautenav_order_id' => (int) $idOrder,
+            'internautenav_admin_order_token' => $adminToken,
+            'internautenav_admin_order_ajax_url' => $ajaxUrl,
+            'internautenav_admin_order_modal_title' => $this->l('Dokumentvorschau'),
+            'internautenav_admin_order_modal_close' => $this->l('Schliessen'),
+            'internautenav_admin_order_modal_approve' => $this->l('Pruefung bestanden'),
+            'internautenav_admin_order_modal_reject' => $this->l('Pruefung abgelehnt'),
+            'internautenav_admin_order_modal_hint' => $this->l('Loescht alle Dokumente DSGVO-konform sofort.'),
+            'internautenav_admin_order_load_script' => $loadAdminScript,
+            'internautenav_admin_order_load_style' => $loadAdminCss,
+            'internautenav_admin_order_css_url' => __PS_BASE_URI__ . 'modules/' . $this->name . '/views/css/admin_order_main_bottom.css',
+            'internautenav_admin_order_js_url' => __PS_BASE_URI__ . 'modules/' . $this->name . '/views/js/admin_order_main_bottom.js',
+            'internautenav_admin_order_msg_confirm_approve' => $this->l('Prüfung als bestanden markieren und alle Dokumente DSGVO-konform löschen?'),
+            'internautenav_admin_order_msg_confirm_reject' => $this->l('Prüfung als abgelehnt markieren und alle Dokumente DSGVO-konform löschen?'),
+            'internautenav_admin_order_msg_ok_approve' => $this->l('Prüfung bestanden gespeichert. Dokumente gelöscht.'),
+            'internautenav_admin_order_msg_ok_reject' => $this->l('Prüfung abgelehnt gespeichert. Dokumente gelöscht.'),
+            'internautenav_admin_order_msg_error_prefix' => $this->l('Fehler:'),
+            'internautenav_admin_order_msg_error_unknown' => $this->l('Unbekannter Fehler'),
+            'internautenav_admin_order_msg_error_connection' => $this->l('Verbindungsfehler beim Speichern der Entscheidung.'),
+        ]);
 
-        return $protocolPanel . $output;
+        return $this->display(__FILE__, 'views/templates/hook/admin_order_main_bottom.tpl');
     }
 
     public function validateMrzForCarrier($carrierId, array $payload, $persistOnSuccess = false)
