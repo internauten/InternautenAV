@@ -170,15 +170,11 @@ class Internautenav extends Module
                 . '&token=' . $token
             );
         }
-        $action = htmlspecialchars(
-            $this->context->link->getAdminLink('AdminModules', true, [], [
-                'configure' => $this->name,
-                'tab_module' => $this->tab,
-                'module_name' => $this->name,
-            ]),
-            ENT_QUOTES,
-            'UTF-8'
-        );
+        $action = $this->context->link->getAdminLink('AdminModules', true, [], [
+            'configure' => $this->name,
+            'tab_module' => $this->tab,
+            'module_name' => $this->name,
+        ]);
 
         // Prepare carriers for template
         $carriersForTemplate = [];
@@ -653,15 +649,11 @@ class Internautenav extends Module
             );
         }
 
-        $cleanupAction = htmlspecialchars(
-            $this->context->link->getAdminLink('AdminModules', true, [], [
-                'configure' => $this->name,
-                'tab_module' => $this->tab,
-                'module_name' => $this->name,
-            ]),
-            ENT_QUOTES,
-            'UTF-8'
-        );
+        $cleanupAction = $this->context->link->getAdminLink('AdminModules', true, [], [
+            'configure' => $this->name,
+            'tab_module' => $this->tab,
+            'module_name' => $this->name,
+        ]);
 
         // Prepare Cron URLs
         $cronToken = hash('sha256', _COOKIE_KEY_ . 'internautenav_cron');
