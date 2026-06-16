@@ -26,7 +26,7 @@ class Internautenav extends Module
     {
         $this->name = 'internautenav';
         $this->tab = 'shipping_logistics';
-        $this->version = '3.0.2';
+        $this->version = '3.0.3';
         $this->author = 'die.internauten.ch';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -1353,7 +1353,35 @@ class Internautenav extends Module
              LIMIT ' . $limit
         );
 
-        return is_array($rows) ? $rows : [];
+        if (is_array($rows) && !empty($rows)) {
+            return $rows;
+        }
+
+        // Backward-compatible fallback: customers marked as verified without log rows
+        // (e.g. via mark_existing_customers) should still show protocol and green badge.
+        $persistent = Db::getInstance()->getRow(
+            'SELECT `doc_type`, `verified_at`
+             FROM `' . _DB_PREFIX_ . self::DB_TABLE . '`
+             WHERE `id_customer` = ' . $idCustomer . '
+                             AND `is_verified` = 1'
+        );
+
+        if (!is_array($persistent) || empty($persistent)) {
+            return [];
+        }
+
+        $docType = trim((string) ($persistent['doc_type'] ?? ''));
+        if ($docType === '') {
+            $docType = 'Bestandskunde';
+        }
+
+        return [[
+            'id_cart' => null,
+            'doc_type' => $docType,
+            'result' => 1,
+            'result_message' => $this->l('Als Bestandskunde verifiziert (ohne Einzelpruefungs-Log).'),
+            'checked_at' => (string) ($persistent['verified_at'] ?? ''),
+        ]];
     }
 
     private function renderCustomerVerificationStatusBadge($idCustomer, array $rows)
