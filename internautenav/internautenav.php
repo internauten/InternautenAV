@@ -414,6 +414,7 @@ class Internautenav extends Module
             'id_customer' => 'v.id_customer',
             'fullname' => 'fullname',
             'email' => 'c.email',
+            'is_verified' => 'v.is_verified',
             'doc_type' => 'v.doc_type',
             'birth_date' => 'v.birth_date',
             'verified_at' => 'v.verified_at',
@@ -485,6 +486,7 @@ class Internautenav extends Module
                 v.id_customer,
                 CONCAT(COALESCE(c.firstname, \'' . '\'), \'' . ' ' . '\', COALESCE(c.lastname, \'' . '\')) AS fullname,
                 COALESCE(c.email, \'' . '\') AS email,
+                v.is_verified,
                 v.doc_type,
                 v.birth_date,
                 v.verified_at
@@ -598,6 +600,11 @@ class Internautenav extends Module
             'email' => [
                 'title' => $this->l('debug_persistent_col_email'),
                 'type' => 'text',
+                'align' => 'text-left',
+            ],
+            'is_verified' => [
+                'title' => $this->l('is_verified'),
+                'type' => 'int',
                 'align' => 'text-left',
             ],
             'doc_type' => [
@@ -1132,13 +1139,13 @@ class Internautenav extends Module
         $status = $this->getOrderVerificationStatus($order);
         $this->debugOrderStatusDecision($order, $status, 'pdf');
 
-        // Unknown status should not be shown in PDF.
-        if ($status['state'] === 'unknown') {
+        $idCustomer = (int) $order->id_customer;
+        if ($idCustomer <= 0) {
             return '';
         }
 
-        $idCustomer = (int) $order->id_customer;
-        if ($idCustomer > 0 && $this->isCustomerVerified($idCustomer) && $status['state'] !== 'pending') {
+        // PDF visibility is controlled by the persistent verification flag only.
+        if ($this->isCustomerVerified($idCustomer)) {
             return '';
         }
 
@@ -2067,23 +2074,25 @@ class Internautenav extends Module
         // wenn nachfolgende PS-Operationen (Cart::getDeliveryOption etc.) den Dispatcher triggern.
         unset($_FILES['document_upload']);
 
-        if ($persistOnSuccess) {
-            $verificationData = [
-                'carrier_id' => (int) $carrierId,
-                'carrier_reference' => (int) $carrierReference,
-                'doc_type' => 'upload',
-                'birth_date' => null,
-                'firstname' => '',
-                'lastname' => '',
-                'uploaded_document_id' => (int) ($storeResult['uploaded_document_id'] ?? 0),
-            ];
+        $verificationData = [
+            'carrier_id' => (int) $carrierId,
+            'carrier_reference' => (int) $carrierReference,
+            'doc_type' => 'upload',
+            'birth_date' => null,
+            'firstname' => '',
+            'lastname' => '',
+            'uploaded_document_id' => (int) ($storeResult['uploaded_document_id'] ?? 0),
+        ];
 
-            $idCustomer = $this->resolveCheckoutCustomerId();
-            if ($idCustomer > 0) {
-                if (!$this->setCustomerVerified($idCustomer, $verificationData)) {
-                    return $this->finalizeMrzValidationResult('upload', false, 'Verifikationsstatus konnte nicht gespeichert werden.');
-                }
-            } else {
+        $idCustomer = $this->resolveCheckoutCustomerId();
+        if ($idCustomer > 0) {
+            if (!$this->setCustomerUnverified($idCustomer, $verificationData)) {
+                return $this->finalizeMrzValidationResult('upload', false, 'Verifikationsstatus konnte nicht gespeichert werden.');
+            }
+        }
+
+        if ($persistOnSuccess) {
+            if ($idCustomer <= 0) {
                 $this->setCheckoutVerificationState($verificationData);
             }
         }
@@ -2805,6 +2814,13 @@ class Internautenav extends Module
                 'firstname' => null,
                 'lastname' => null,
             ]);
+        } elseif (!$approved && $idCustomer > 0) {
+            $this->setCustomerUnverified($idCustomer, [
+                'doc_type' => 'upload',
+                'birth_date' => null,
+                'firstname' => null,
+                'lastname' => null,
+            ]);
         }
 
         $ids = [];
@@ -2828,17 +2844,30 @@ class Internautenav extends Module
         return ['success' => true, 'message' => 'Prüfung ' . $verb . '. ' . count($ids) . ' Datei(en) DSGVO-konform gelöscht.'];
     }
 
-    private function setCustomerVerified($idCustomer, array $data)    {
+    private function setCustomerVerified($idCustomer, array $data)
+    {
+        return $this->setCustomerVerificationFlag($idCustomer, true, $data);
+    }
+
+    private function setCustomerUnverified($idCustomer, array $data)
+    {
+        return $this->setCustomerVerificationFlag($idCustomer, false, $data);
+    }
+
+    private function setCustomerVerificationFlag($idCustomer, $isVerified, array $data)
+    {
         $idCustomer = (int) $idCustomer;
         if ($idCustomer <= 0) {
             return false;
         }
 
+        $verifiedValue = $isVerified ? 1 : 0;
+
         $sql = 'INSERT INTO `' . _DB_PREFIX_ . self::DB_TABLE . '`
             (`id_customer`, `is_verified`, `doc_type`, `birth_date`, `firstname`, `lastname`, `verified_at`)
             VALUES (
                 ' . $idCustomer . ',
-                1,
+                ' . $verifiedValue . ',
                 \'' . pSQL((string) $data['doc_type']) . '\',
                 ' . (!empty($data['birth_date']) ? '\'' . pSQL((string) $data['birth_date']) . '\'' : 'NULL') . ',
                 ' . (!empty($data['firstname']) ? '\'' . pSQL((string) $data['firstname']) . '\'' : 'NULL') . ',
