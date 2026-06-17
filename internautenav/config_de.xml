@@ -2,8 +2,8 @@
 <module>
     <name>internautenav</name>
     <displayName><![CDATA[Internauten AV]]></displayName>
-    <version><![CDATA[2.0.0]]></version>
-    <description><![CDATA[MRZ-Verifikation fuer ausgewaehlte Versandarten (CH ID, CH Pass, EU Pass, Upload).]]></description>
+    <version><![CDATA[3.0.3]]></version>
+    <description><![CDATA[MRZ-Verifikation f&uuml;r ausgewaehlte Versandarten (CH ID, CH Pass, EU Pass, Upload).]]></description>
     <author><![CDATA[die.internauten.ch]]></author>
     <tab><![CDATA[shipping_logistics]]></tab>
     <is_configurable>1</is_configurable>

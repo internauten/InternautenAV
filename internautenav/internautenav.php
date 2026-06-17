@@ -15,6 +15,7 @@ class Internautenav extends Module
     public const CONF_REQUIRED_CARRIER_REFS = 'INTERNAUTENAV_REQUIRED_CARRIER_REFS';
     public const CONF_LAST_UPLOAD_CLEANUP_AT = 'INTERNAUTENAV_LAST_UPLOAD_CLEANUP_AT';
     public const CONF_PRIVACY_CMS_ID = 'INTERNAUTENAV_PRIVACY_CMS_ID';
+    public const CONF_STATUS_DEBUG_ENABLED = 'INTERNAUTENAV_STATUS_DEBUG_ENABLED';
     public const DB_TABLE = 'internautenav_customer_verification';
     public const DB_LOG_TABLE = 'internautenav_verification_log';
     public const DB_UPLOAD_TABLE = 'internautenav_uploaded_documents';
@@ -69,6 +70,7 @@ class Internautenav extends Module
             && $this->installDatabase()
             && Configuration::updateValue(self::CONF_REQUIRED_CARRIER_REFS, json_encode([]))
             && Configuration::updateValue(self::CONF_PRIVACY_CMS_ID, '0')
+            && Configuration::updateValue(self::CONF_STATUS_DEBUG_ENABLED, '0')
             && Configuration::updateValue(self::CONF_LAST_UPLOAD_CLEANUP_AT, '0');
     }
 
@@ -76,6 +78,7 @@ class Internautenav extends Module
     {
         return Configuration::deleteByName(self::CONF_REQUIRED_CARRIER_REFS)
             && Configuration::deleteByName(self::CONF_PRIVACY_CMS_ID)
+            && Configuration::deleteByName(self::CONF_STATUS_DEBUG_ENABLED)
             && Configuration::deleteByName(self::CONF_LAST_UPLOAD_CLEANUP_AT)
             && $this->uninstallDatabase()
             && parent::uninstall();
@@ -94,10 +97,12 @@ class Internautenav extends Module
             if ($privacyCmsId < 0) {
                 $privacyCmsId = 0;
             }
+            $statusDebugEnabled = (int) Tools::getValue('INTERNAUTENAV_STATUS_DEBUG_ENABLED', 0) === 1 ? 1 : 0;
 
             $selectedRefs = array_values(array_unique(array_map('intval', $selectedRefs)));
             Configuration::updateValue(self::CONF_REQUIRED_CARRIER_REFS, json_encode($selectedRefs));
             Configuration::updateValue(self::CONF_PRIVACY_CMS_ID, (string) $privacyCmsId);
+            Configuration::updateValue(self::CONF_STATUS_DEBUG_ENABLED, (string) $statusDebugEnabled);
             $output .= $this->displayConfirmation($this->l('backoffice_settings_saved'));
         }
 
@@ -128,6 +133,7 @@ class Internautenav extends Module
 
         $current = $this->getRequiredCarrierReferences();
         $privacyCmsId = (int) Configuration::get(self::CONF_PRIVACY_CMS_ID);
+        $statusDebugEnabled = (int) Configuration::get(self::CONF_STATUS_DEBUG_ENABLED) === 1;
         $privacyCmsStatusClass = 'text-muted';
         $privacyCmsStatusMessage = $this->l('Beispielseite aktiv (keine CMS-ID gesetzt).');
         if ($privacyCmsId > 0) {
@@ -209,6 +215,9 @@ class Internautenav extends Module
             'internautenav_privacy_default_label' => $this->l('Modul-Beispielseite verwenden'),
             'internautenav_privacy_cms_status_class' => $privacyCmsStatusClass,
             'internautenav_privacy_cms_status_message' => $privacyCmsStatusMessage,
+            'internautenav_status_debug_enabled' => $statusDebugEnabled,
+            'internautenav_status_debug_label' => $this->l('Status-Debug-Logging aktivieren'),
+            'internautenav_status_debug_help' => $this->l('Schreibt Entscheidungsdaten fuer BO/PDF-Status in das PrestaShop-Log.'),
             'internautenav_status_label' => $this->l('Status'),
             'internautenav_save_button' => $this->l('backoffice_save_button'),
         ]);
@@ -1022,6 +1031,33 @@ class Internautenav extends Module
         );
     }
 
+    private function isStatusDebugEnabled()
+    {
+        return (int) Configuration::get(self::CONF_STATUS_DEBUG_ENABLED) === 1;
+    }
+
+    private function debugOrderStatusDecision(Order $order, array $status, $scope)
+    {
+        if (!$this->isStatusDebugEnabled()) {
+            return;
+        }
+
+        $idOrder = (int) $order->id;
+        $idCustomer = (int) $order->id_customer;
+        $state = (string) ($status['state'] ?? '');
+        $type = (string) ($status['type'] ?? '');
+
+        $this->debugLog(sprintf(
+            'status[%s] id_order=%d id_customer=%d state=%s type=%s is_verified=%d',
+            (string) $scope,
+            $idOrder,
+            $idCustomer,
+            $state,
+            $type,
+            $idCustomer > 0 && $this->isCustomerVerified($idCustomer) ? 1 : 0
+        ));
+    }
+
     public function hookActionCarrierProcess($params)
     {
         return true;
@@ -1068,76 +1104,10 @@ class Internautenav extends Module
             return '';
         }
 
-        $carrier = new Carrier((int) $order->id_carrier);
-        $carrierRequired = Validate::isLoadedObject($carrier)
-            && $this->isCarrierReferenceRequired((int) $carrier->id_reference);
+        $status = $this->getOrderVerificationStatus($order);
+        $this->debugOrderStatusDecision($order, $status, 'bo');
 
-        if (!$carrierRequired) {
-            return $this->renderOrderStatusBadge(
-                'info',
-                '&#128666; ' . htmlspecialchars($this->l('Pruefung bei Uebergabe'), ENT_QUOTES, 'UTF-8'),
-                htmlspecialchars($this->l('Diese Versandart erfordert keine Online-Altersprüfung.'), ENT_QUOTES, 'UTF-8')
-            );
-        }
-
-        // Offene Dokumente vorhanden → manuell prüfen
-        if ($this->ensureUploadTable()) {
-            $pendingDocs = (int) Db::getInstance()->getValue(
-                'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
-                 WHERE id_order = ' . $idOrder
-            );
-            if ($pendingDocs > 0) {
-                return $this->renderOrderStatusBadge(
-                    'warning',
-                    '&#9888; ' . htmlspecialchars($this->l('Pruefung manuell erledigen'), ENT_QUOTES, 'UTF-8'),
-                    htmlspecialchars(
-                        sprintf($this->l('%d Dokument(e) hochgeladen, noch nicht geprüft.'), $pendingDocs),
-                        ENT_QUOTES, 'UTF-8'
-                    )
-                );
-            }
-        }
-
-        // Log-Eintrag suchen: primär über id_customer, Fallback über id_cart.
-        $idCustomerOrder = (int) $order->id_customer;
-        $idCart = (int) $order->id_cart;
-        if ($this->ensureVerificationLogTable()) {
-            $logCondition = $idCustomerOrder > 0
-                ? 'id_customer = ' . $idCustomerOrder
-                : ($idCart > 0 ? 'id_cart = ' . $idCart : null);
-            $logRow = $logCondition ? Db::getInstance()->getRow(
-                'SELECT `result`, `result_message`, `doc_type`, `checked_at`
-                 FROM `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '`
-                 WHERE ' . $logCondition . '
-                 ORDER BY checked_at DESC'
-            ) : null;
-            if (is_array($logRow) && isset($logRow['result'])) {
-                $isManual = (strpos((string) ($logRow['result_message'] ?? ''), 'Manuelle Prüfung') !== false);
-                if ((int) $logRow['result'] === 1) {
-                    $label = $isManual
-                        ? '&#10003; ' . htmlspecialchars($this->l('Pruefung manuell bestanden'), ENT_QUOTES, 'UTF-8')
-                        : '&#10003; ' . htmlspecialchars($this->l('Pruefung automatisch bestanden'), ENT_QUOTES, 'UTF-8');
-                    $detail = htmlspecialchars(
-                        ($isManual ? 'Manuell' : ucfirst((string) $logRow['doc_type'])) . ' – ' . (string) $logRow['checked_at'],
-                        ENT_QUOTES, 'UTF-8'
-                    );
-                    return $this->renderOrderStatusBadge('success', $label, $detail);
-                } else {
-                    return $this->renderOrderStatusBadge(
-                        'danger',
-                        '&#10007; ' . htmlspecialchars($this->l('Pruefung abgelehnt'), ENT_QUOTES, 'UTF-8'),
-                        htmlspecialchars((string) ($logRow['result_message'] ?? ''), ENT_QUOTES, 'UTF-8')
-                    );
-                }
-            }
-        }
-
-        // Kein Eintrag gefunden
-        return $this->renderOrderStatusBadge(
-            'default',
-            '&#63; ' . htmlspecialchars($this->l('Keine Pruefung vorhanden'), ENT_QUOTES, 'UTF-8'),
-            htmlspecialchars($this->l('Für diese Bestellung liegt kein Verifikationseintrag vor.'), ENT_QUOTES, 'UTF-8')
-        );
+        return $this->renderOrderStatusBadge($status['type'], $status['label'], $status['detail']);
     }
 
     public function hookDisplayPDFInvoice($params)
@@ -1158,24 +1128,25 @@ class Internautenav extends Module
             return '';
         }
 
-        $badgeHtml = $this->hookDisplayAdminOrderTop([
-            'id_order' => (int) $order->id,
-            'order' => $order,
-        ]);
-
-        if ($badgeHtml === '') {
-            return '';
-        }
+        $status = $this->getOrderVerificationStatus($order);
+        $this->debugOrderStatusDecision($order, $status, 'pdf');
 
         // Unknown status should not be shown in PDF.
-        if (strpos($badgeHtml, '&#63;') !== false) {
+        if ($status['state'] === 'unknown') {
             return '';
         }
+
+        $idCustomer = (int) $order->id_customer;
+        if ($idCustomer > 0 && $this->isCustomerVerified($idCustomer) && $status['state'] !== 'pending') {
+            return '';
+        }
+
+        $badgeHtml = $this->renderOrderStatusBadge($status['type'], $status['label'], $status['detail']);
 
         // PDF fonts may not contain glyphs for icon entities; use ASCII-safe labels.
         $badgeHtml = str_replace(
-            ['&#10003;', '&#10007;', '&#63;', '&#9888;', '&#128666;'],
-            ['BESTANDEN!', 'ABGELEHNT!', 'UNBEKANNT!', 'HINWEIS!', 'HINWEIS'],
+            ['&#10003;', '&amp;#10003;', '&#10007;', '&amp;#10007;', '&#63;', '&amp;#63;', '&#9888;', '&amp;#9888;', '&#128666;', '&amp;#128666;'],
+            ['BESTANDEN!', 'BESTANDEN!', 'ABGELEHNT!', 'ABGELEHNT!', 'UNBEKANNT!', 'UNBEKANNT!', 'HINWEIS!', 'HINWEIS!', 'HINWEIS', 'HINWEIS'],
             $badgeHtml
         );
 
@@ -1184,6 +1155,119 @@ class Internautenav extends Module
         ]);
 
         return $this->display(__FILE__, 'views/templates/hook/order_status_badge_pdf.tpl');
+    }
+
+    private function getOrderVerificationStatus(Order $order)
+    {
+        $idOrder = (int) $order->id;
+        $idCustomer = (int) $order->id_customer;
+        $idCart = (int) $order->id_cart;
+
+        $carrier = new Carrier((int) $order->id_carrier);
+        $carrierRequired = Validate::isLoadedObject($carrier)
+            && $this->isCarrierReferenceRequired((int) $carrier->id_reference);
+
+        if (!$carrierRequired) {
+            return [
+                'state' => 'handover',
+                'type' => 'info',
+                'label' => '&#128666; ' . htmlspecialchars($this->l('Pruefung bei Uebergabe'), ENT_QUOTES, 'UTF-8'),
+                'detail' => htmlspecialchars($this->l('Diese Versandart erfordert keine Online-Altersprüfung.'), ENT_QUOTES, 'UTF-8'),
+            ];
+        }
+
+        if ($this->ensureUploadTable()) {
+            $pendingDocs = (int) Db::getInstance()->getValue(
+                'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
+                 WHERE id_order = ' . $idOrder
+            );
+            if ($pendingDocs > 0) {
+                return [
+                    'state' => 'pending',
+                    'type' => 'warning',
+                    'label' => '&#9888; ' . htmlspecialchars($this->l('Pruefung manuell erledigen'), ENT_QUOTES, 'UTF-8'),
+                    'detail' => htmlspecialchars(
+                        sprintf($this->l('%d Dokument(e) hochgeladen, noch nicht geprüft.'), $pendingDocs),
+                        ENT_QUOTES,
+                        'UTF-8'
+                    ),
+                ];
+            }
+        }
+
+        if ($this->ensureVerificationLogTable()) {
+            $logCondition = $idCustomer > 0
+                ? 'id_customer = ' . $idCustomer
+                : ($idCart > 0 ? 'id_cart = ' . $idCart : null);
+            $logRow = $logCondition ? Db::getInstance()->getRow(
+                'SELECT `result`, `result_message`, `doc_type`, `checked_at`
+                 FROM `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '`
+                 WHERE ' . $logCondition . '
+                 ORDER BY checked_at DESC'
+            ) : null;
+
+            if (is_array($logRow) && isset($logRow['result'])) {
+                $isManual = (strpos((string) ($logRow['result_message'] ?? ''), 'Manuelle Prüfung') !== false);
+                if ((int) $logRow['result'] === 1) {
+                    return [
+                        'state' => 'success',
+                        'type' => 'success',
+                        'label' => $isManual
+                            ? '&#10003; ' . htmlspecialchars($this->l('Pruefung manuell bestanden'), ENT_QUOTES, 'UTF-8')
+                            : '&#10003; ' . htmlspecialchars($this->l('Pruefung automatisch bestanden'), ENT_QUOTES, 'UTF-8'),
+                        'detail' => htmlspecialchars(
+                            ($isManual ? 'Manuell' : ucfirst((string) ($logRow['doc_type'] ?? ''))) . ' – ' . (string) ($logRow['checked_at'] ?? ''),
+                            ENT_QUOTES,
+                            'UTF-8'
+                        ),
+                    ];
+                }
+
+                return [
+                    'state' => 'rejected',
+                    'type' => 'danger',
+                    'label' => '&#10007; ' . htmlspecialchars($this->l('Pruefung abgelehnt'), ENT_QUOTES, 'UTF-8'),
+                    'detail' => htmlspecialchars((string) ($logRow['result_message'] ?? ''), ENT_QUOTES, 'UTF-8'),
+                ];
+            }
+        }
+
+        // Fallback for customers marked as verified without log entries (e.g. Bestandskunde).
+        if ($idCustomer > 0) {
+            $persistent = Db::getInstance()->getRow(
+                'SELECT `doc_type`, `verified_at`
+                 FROM `' . _DB_PREFIX_ . self::DB_TABLE . '`
+                 WHERE `id_customer` = ' . $idCustomer . '
+                   AND `is_verified` = 1'
+            );
+
+            if (is_array($persistent) && !empty($persistent)) {
+                $docType = trim((string) ($persistent['doc_type'] ?? ''));
+                if ($docType === '') {
+                    $docType = 'Bestandskunde';
+                }
+
+                $detail = $docType;
+                $verifiedAt = (string) ($persistent['verified_at'] ?? '');
+                if ($verifiedAt !== '') {
+                    $detail .= ' – ' . $verifiedAt;
+                }
+
+                return [
+                    'state' => 'success',
+                    'type' => 'success',
+                    'label' => '&#10003; ' . htmlspecialchars($this->l('Pruefung automatisch bestanden'), ENT_QUOTES, 'UTF-8'),
+                    'detail' => htmlspecialchars($detail, ENT_QUOTES, 'UTF-8'),
+                ];
+            }
+        }
+
+        return [
+            'state' => 'unknown',
+            'type' => 'default',
+            'label' => '&#63; ' . htmlspecialchars($this->l('Keine Pruefung vorhanden'), ENT_QUOTES, 'UTF-8'),
+            'detail' => htmlspecialchars($this->l('Für diese Bestellung liegt kein Verifikationseintrag vor.'), ENT_QUOTES, 'UTF-8'),
+        ];
     }
 
     private function resolveOrderFromPdfObject($object)
@@ -1999,15 +2083,38 @@ class Internautenav extends Module
             KEY `idx_created_at` (`created_at`)
         ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8mb4;';
 
-        // Migrate existing installations: make id_cart nullable and add id_customer index.
-        Db::getInstance()->execute(
-            'ALTER TABLE `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
-             MODIFY `id_cart` INT(10) UNSIGNED NULL'
+        if (!Db::getInstance()->execute($sql)) {
+            return false;
+        }
+
+        $tableName = _DB_PREFIX_ . self::DB_UPLOAD_TABLE;
+        $tableExists = (int) Db::getInstance()->getValue(
+            'SELECT COUNT(*) FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = \'' . pSQL($tableName) . '\''
         );
+        if (!$tableExists) {
+            return false;
+        }
+
+        // Migrate existing installations: make id_cart nullable and add id_customer index.
+        $idCartColumnExists = (int) Db::getInstance()->getValue(
+            'SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = \'' . pSQL($tableName) . '\'
+               AND COLUMN_NAME = \'id_cart\''
+        );
+        if ($idCartColumnExists) {
+            Db::getInstance()->execute(
+                'ALTER TABLE `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
+                 MODIFY `id_cart` INT(10) UNSIGNED NULL'
+            );
+        }
+
         $indexExists = (int) Db::getInstance()->getValue(
             'SELECT COUNT(*) FROM information_schema.STATISTICS
              WHERE TABLE_SCHEMA = DATABASE()
-               AND TABLE_NAME = \'' . pSQL(_DB_PREFIX_ . self::DB_UPLOAD_TABLE) . '\'
+               AND TABLE_NAME = \'' . pSQL($tableName) . '\'
                AND INDEX_NAME = \'idx_id_customer\''
         );
         if (!$indexExists) {
@@ -2017,7 +2124,7 @@ class Internautenav extends Module
             );
         }
 
-        return Db::getInstance()->execute($sql);
+        return true;
     }
 
     private function validateUploadForCarrier($carrierId, $carrierReference, array $payload, $persistOnSuccess)
@@ -2598,6 +2705,36 @@ class Internautenav extends Module
             ];
         }
 
+
+        // Fallback for customers that were marked as verified without a log entry
+        // (e.g. mark_existing_customers / Bestandskunde).
+        if ($idCustomerOrder > 0) {
+            $persistentVerification = Db::getInstance()->getRow(
+                'SELECT `doc_type`, `verified_at`
+                 FROM `' . _DB_PREFIX_ . self::DB_TABLE . '`
+                 WHERE `id_customer` = ' . (int) $idCustomerOrder . '
+                   AND `is_verified` = 1'
+            );
+
+            if (is_array($persistentVerification) && !empty($persistentVerification)) {
+                $docType = trim((string) ($persistentVerification['doc_type'] ?? ''));
+                if ($docType === '') {
+                    $docType = 'Bestandskunde';
+                }
+
+                $detail = $docType;
+                $verifiedAt = (string) ($persistentVerification['verified_at'] ?? '');
+                if ($verifiedAt !== '') {
+                    $detail .= ' - ' . $verifiedAt;
+                }
+
+                return $this->renderOrderStatusBadge(
+                    'success',
+                    '&#10003; ' . htmlspecialchars($this->l('Pruefung automatisch bestanden'), ENT_QUOTES, 'UTF-8'),
+                    htmlspecialchars($detail, ENT_QUOTES, 'UTF-8')
+                );
+            }
+        }
         if ($idGuest > 0) {
             return [
                 'customer_reference' => 'guest-' . $idGuest,

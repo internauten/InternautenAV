@@ -41,6 +41,15 @@
             </p>
         </div>
 
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="INTERNAUTENAV_STATUS_DEBUG_ENABLED" value="1"
+                    {if $internautenav_status_debug_enabled}checked{/if}>
+                {$internautenav_status_debug_label|escape:'htmlall':'UTF-8'}
+            </label>
+            <p class="help-block">{$internautenav_status_debug_help|escape:'htmlall':'UTF-8'}</p>
+        </div>
+
         <button type="submit" name="submitInternautenavConfig" class="btn btn-primary">
             {$internautenav_save_button|escape:'htmlall':'UTF-8'}
         </button>
