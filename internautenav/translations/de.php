@@ -54,6 +54,7 @@ $_MODULE['<{internautenav}prestashop>internautenav_481428a19732009990c4bac9de10d
 $_MODULE['<{internautenav}prestashop>internautenav_1e8c192b93b08e816a1b9df13a66b5a0'] = 'Für die gewaehlte Versandart ist vor der Zahlung eine Alters- und Identitaetsprüfung erforderlich.';
 $_MODULE['<{internautenav}prestashop>internautenav_ced123c28ff6715c302676ffd917d7a9'] = 'Altersprüfung jetzt starten';
 $_MODULE['<{internautenav}prestashop>internautenav_3c2e70ff78ce52edb12afc7a5c1b277f'] = 'Altersprüfung erfolgreich abgeschlossen. Die Zahlung ist freigeschaltet.';
+$_MODULE['<{internautenav}prestashop>internautenav_2671b4fa8693c1d25a942f07c11dd6c0'] = 'Ausweis zur Altersprüfung eingereicht. Die Zahlung ist freigeschaltet.';
 $_MODULE['<{internautenav}prestashop>internautenav_45c6662501837c3083030260413f34df'] = 'Solange die erfolgreiche Altersprüfung nicht serverseitig vorliegt, bleiben die Zahlungsfelder gesperrt.';
 $_MODULE['<{internautenav}prestashop>internautenav_448d315158bc82c3f64ceb007056fd0b'] = 'Altersprüfung';
 $_MODULE['<{internautenav}prestashop>internautenav_c691329cd3e16f8d829813b5feb2b451'] = 'Schliessen';

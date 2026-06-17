@@ -773,12 +773,15 @@ class Internautenav extends Module
         }
 
         $isVerified = $this->isAlreadyVerifiedForCheckout();
+        $hasPendingUpload = $this->hasPendingUploadForCheckout();
         $privacyLinkData = $this->getPrivacyPageLinkData();
 
         $this->context->smarty->assign([
             'internautenav_carrier_id' => $carrier['id'],
             'internautenav_carrier_name' => $carrier['name'],
             'internautenav_is_verified' => $isVerified,
+            'internautenav_has_pending_upload' => $hasPendingUpload,
+            'internautenav_payment_success_upload' => $this->l('payment_success_upload'),
             'internautenav_privacy_url' => $privacyLinkData['url'],
             'internautenav_privacy_label' => $this->l('Datenschutzerklaerung'),
             'internautenav_privacy_is_example' => $privacyLinkData['is_example'],
@@ -1822,11 +1825,44 @@ class Internautenav extends Module
         return is_array($docTypes) && array_key_exists($carrierId, $docTypes);
     }
 
+    private function hasPendingUploadForCheckout()
+    {
+        if (!$this->ensureUploadTable()) {
+            return false;
+        }
+
+        $idCustomer = $this->resolveCheckoutCustomerId();
+        if ($idCustomer > 0) {
+            return (int) Db::getInstance()->getValue(
+                'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
+                 WHERE id_customer = ' . $idCustomer . '
+                   AND (id_order IS NULL OR id_order = 0)'
+            ) > 0;
+        }
+
+        if (Validate::isLoadedObject($this->context->cart)) {
+            $idCart = (int) $this->context->cart->id;
+            if ($idCart > 0) {
+                return (int) Db::getInstance()->getValue(
+                    'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
+                     WHERE id_cart = ' . $idCart . '
+                       AND (id_order IS NULL OR id_order = 0)'
+                ) > 0;
+            }
+        }
+
+        return false;
+    }
+
     private function isAlreadyVerifiedForCheckout()
     {
         $idCustomer = $this->resolveCheckoutCustomerId();
         if ($idCustomer > 0) {
-            return $this->isCustomerVerified($idCustomer);
+            if ($this->isCustomerVerified($idCustomer)) {
+                return true;
+            }
+            // Customers with a pending upload are considered ready for checkout.
+            return $this->hasPendingUploadForCheckout();
         }
 
         $carrier = $this->getCurrentCheckoutCarrier();

@@ -602,6 +602,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 setBusy(gate, false);
+
+                // For upload submissions show a different success message.
+                if (payload.docType === 'upload') {
+                    var successEl = gate.querySelector('.js-internautenav-success-note');
+                    if (successEl) {
+                        var uploadText = successEl.getAttribute('data-text-upload');
+                        if (uploadText) {
+                            successEl.textContent = uploadText;
+                        }
+                    }
+                }
+
                 setPaymentLocked(gate, false);
                 closeModal(gate);
             })
