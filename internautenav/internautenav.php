@@ -9,6 +9,7 @@ if (!is_file($mrzValidatorPath)) {
     $mrzValidatorPath = __DIR__ . '/classes/MrzValidator.php';
 }
 require_once $mrzValidatorPath;
+require_once __DIR__ . '/sql.php';
 
 class Internautenav extends Module
 {
@@ -2020,111 +2021,33 @@ class Internautenav extends Module
 
     private function installDatabase()
     {
-        $sql = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . self::DB_TABLE . '` (
-            `id_customer` INT(10) UNSIGNED NOT NULL,
-            `is_verified` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
-            `doc_type` VARCHAR(16) NOT NULL,
-            `birth_date` DATE NULL,
-            `firstname` VARCHAR(64) NULL,
-            `lastname` VARCHAR(64) NULL,
-            `verified_at` DATETIME NOT NULL,
-            PRIMARY KEY (`id_customer`)
-        ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8mb4;';
-
-        return Db::getInstance()->execute($sql) && $this->ensureVerificationLogTable() && $this->ensureUploadTable();
+        return InternautenavSql::installSchema(
+            _DB_PREFIX_,
+            _MYSQL_ENGINE_,
+            self::DB_TABLE,
+            self::DB_LOG_TABLE,
+            self::DB_UPLOAD_TABLE
+        );
     }
 
     private function uninstallDatabase()
     {
-        $sql = 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . self::DB_TABLE . '`;';
-        $logSql = 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '`;';
-        $uploadSql = 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`;';
-
-        return Db::getInstance()->execute($sql) && Db::getInstance()->execute($logSql) && Db::getInstance()->execute($uploadSql);
+        return InternautenavSql::uninstallSchema(
+            _DB_PREFIX_,
+            self::DB_TABLE,
+            self::DB_LOG_TABLE,
+            self::DB_UPLOAD_TABLE
+        );
     }
 
     private function ensureVerificationLogTable()
     {
-        $sql = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . self::DB_LOG_TABLE . '` (
-            `id_internautenav_verification_log` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-            `customer_reference` VARCHAR(64) NOT NULL,
-            `id_customer` INT(10) UNSIGNED NULL,
-            `id_guest` INT(10) UNSIGNED NULL,
-            `id_cart` INT(10) UNSIGNED NULL,
-            `doc_type` VARCHAR(16) NOT NULL,
-            `result` TINYINT(1) UNSIGNED NOT NULL,
-            `result_message` VARCHAR(255) NULL,
-            `checked_at` DATETIME NOT NULL,
-            PRIMARY KEY (`id_internautenav_verification_log`),
-            KEY `idx_customer_reference` (`customer_reference`),
-            KEY `idx_checked_at` (`checked_at`)
-        ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8mb4;';
-
-        return Db::getInstance()->execute($sql);
+        return InternautenavSql::tableExists(_DB_PREFIX_ . self::DB_LOG_TABLE);
     }
 
     private function ensureUploadTable()
     {
-        $sql = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '` (
-            `id_internautenav_uploaded_document` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-            `id_cart` INT(10) UNSIGNED NULL,
-            `id_order` INT(10) UNSIGNED NULL,
-            `id_customer` INT(10) UNSIGNED NULL,
-            `doc_type` VARCHAR(16) NOT NULL,
-            `file_name` VARCHAR(255) NOT NULL,
-            `original_name` VARCHAR(255) NOT NULL,
-            `mime_type` VARCHAR(100) NOT NULL,
-            `file_size` INT(10) UNSIGNED NOT NULL,
-            `created_at` DATETIME NOT NULL,
-            `attached_at` DATETIME NULL,
-            PRIMARY KEY (`id_internautenav_uploaded_document`),
-            KEY `idx_id_customer` (`id_customer`),
-            KEY `idx_id_order` (`id_order`),
-            KEY `idx_created_at` (`created_at`)
-        ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8mb4;';
-
-        if (!Db::getInstance()->execute($sql)) {
-            return false;
-        }
-
-        $tableName = _DB_PREFIX_ . self::DB_UPLOAD_TABLE;
-        $tableExists = (int) Db::getInstance()->getValue(
-            'SELECT COUNT(*) FROM information_schema.TABLES
-             WHERE TABLE_SCHEMA = DATABASE()
-               AND TABLE_NAME = \'' . pSQL($tableName) . '\''
-        );
-        if (!$tableExists) {
-            return false;
-        }
-
-        // Migrate existing installations: make id_cart nullable and add id_customer index.
-        $idCartColumnExists = (int) Db::getInstance()->getValue(
-            'SELECT COUNT(*) FROM information_schema.COLUMNS
-             WHERE TABLE_SCHEMA = DATABASE()
-               AND TABLE_NAME = \'' . pSQL($tableName) . '\'
-               AND COLUMN_NAME = \'id_cart\''
-        );
-        if ($idCartColumnExists) {
-            Db::getInstance()->execute(
-                'ALTER TABLE `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
-                 MODIFY `id_cart` INT(10) UNSIGNED NULL'
-            );
-        }
-
-        $indexExists = (int) Db::getInstance()->getValue(
-            'SELECT COUNT(*) FROM information_schema.STATISTICS
-             WHERE TABLE_SCHEMA = DATABASE()
-               AND TABLE_NAME = \'' . pSQL($tableName) . '\'
-               AND INDEX_NAME = \'idx_id_customer\''
-        );
-        if (!$indexExists) {
-            Db::getInstance()->execute(
-                'ALTER TABLE `' . _DB_PREFIX_ . self::DB_UPLOAD_TABLE . '`
-                 ADD INDEX `idx_id_customer` (`id_customer`)'
-            );
-        }
-
-        return true;
+        return InternautenavSql::tableExists(_DB_PREFIX_ . self::DB_UPLOAD_TABLE);
     }
 
     private function validateUploadForCarrier($carrierId, $carrierReference, array $payload, $persistOnSuccess)
