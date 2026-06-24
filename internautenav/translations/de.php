@@ -72,6 +72,9 @@ $_MODULE['<{internautenav}prestashop>internautenav_3295794b75985b99452e318bbbb12
 $_MODULE['<{internautenav}prestashop>internautenav_f5b4d0e485de420b51a72243b2bf3440'] = 'Dokumentbild hochladen (jpg oder png)';
 $_MODULE['<{internautenav}prestashop>internautenav_73770d0b3fb4c399362b4531a1294d6b'] = 'Bitte laden Sie ein gut lesbares Bild eines amtlichen Dokuments hoch (Reisepass, Identitaetskarte, Aufenthaltsbewilligung oder anderes amtliches Dokument). Auf dem Bild muss der Name und das Geburtsdatum der Lieferadresse gut lesbar sein.';
 $_MODULE['<{internautenav}prestashop>internautenav_4086ac267cc51dcffd8581677232ee9c'] = 'Bitte Zeilen exakt wie im Dokument eingeben.';
+$_MODULE['<{internautenav}prestashop>internautenav_bd8eecdbb17583ffefc846b128fba6ac'] = 'Bitte die zwei oberen Zeilen exakt wie auf der Rückseite der Schweizer ID eingeben. Die dritte Zeile ist vorbelegt mit dem Namen aus der Lieferadresse.';
+$_MODULE['<{internautenav}prestashop>internautenav_ac53a17ff38f865cec95edfefdbd1191'] = 'Bitte die Daten exakt wie auf der untersten Zeile der Datenseite des Schweizer Passes eingeben.';
+$_MODULE['<{internautenav}prestashop>internautenav_75361cbfd39144f3187de38763362015'] = 'Bitte beide MRZ-Zeilen exakt wie im europäischen Pass eingeben, inklusive < Zeichen.';
 $_MODULE['<{internautenav}prestashop>internautenav_c219b01ba56f7e7bab786c8aa922bf1a'] = 'Altersprüfung bei Uebergabe';
 $_MODULE['<{internautenav}prestashop>internautenav_2202258d8e169a95c82dc52df11fbc3d'] = 'Diese Versandart erfordert keine Online-Altersprüfung.';
 $_MODULE['<{internautenav}prestashop>internautenav_2260da73201dc7d8acd93d424bbeec31'] = 'Altersprüfung manuell erledigen';

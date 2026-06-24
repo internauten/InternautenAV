@@ -38,6 +38,9 @@ $_MODULE['<{internautenav}prestashop>internautenav_448d315158bc82c3f64ceb007056f
 $_MODULE['<{internautenav}prestashop>internautenav_c691329cd3e16f8d829813b5feb2b451'] = 'Fermer';
 $_MODULE['<{internautenav}prestashop>internautenav_a1f8eac04d0be0521423b13bd3e78b16'] = 'Vérifier maintenant';
 $_MODULE['<{internautenav}prestashop>internautenav_4086ac267cc51dcffd8581677232ee9c'] = 'Veuillez saisir les lignes exactement comme dans le document, y compris <.';
+$_MODULE['<{internautenav}prestashop>internautenav_bd8eecdbb17583ffefc846b128fba6ac'] = 'Veuillez saisir exactement les deux lignes supérieures comme au verso de la carte d\'identité suisse. La troisième ligne est préremplie avec le nom de l\'adresse de livraison.';
+$_MODULE['<{internautenav}prestashop>internautenav_ac53a17ff38f865cec95edfefdbd1191'] = 'Veuillez saisir les données exactement comme sur la ligne inférieure de la page de données du passeport suisse.';
+$_MODULE['<{internautenav}prestashop>internautenav_75361cbfd39144f3187de38763362015'] = 'Veuillez saisir les deux lignes MRZ exactement comme dans le passeport européen, y compris les caractères <.';
 $_MODULE['<{internautenav}prestashop>internautenav_287406fe9a6e57317fc5a5795e6f2900'] = 'Type de document';
 $_MODULE['<{internautenav}prestashop>internautenav_12309f0fc1ad868231073aef2aa31ab9'] = 'Carte d\'identité suisse';
 $_MODULE['<{internautenav}prestashop>internautenav_083559e45e69f446341bde604c601818'] = 'Passeport suisse';

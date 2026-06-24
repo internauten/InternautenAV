@@ -169,10 +169,6 @@
   margin-top: 6px;
 }
 
-.internautenav-chpass-filler {
-  letter-spacing: 0.03em;
-}
-
 .internautenav-hint {
   margin: 8px 0 0;
   font-size: 12px;
@@ -239,10 +235,6 @@ body.internautenav-modal-open {
 
   .internautenav-chpass-line2-row {
     gap: 0px;
-  }
-
-  .internautenav-chpass-filler {
-    font-size: 17px;
   }
 }
 

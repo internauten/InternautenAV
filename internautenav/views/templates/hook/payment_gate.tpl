@@ -68,6 +68,7 @@
         <div class="js-internautenav-doc-fields" data-doc-type="ch_id" hidden>
           <div class="internautenav-chid-fields-header">
             <h3>{$internautenav_chid_fields_header|escape:'htmlall':'UTF-8'}</h3>
+            <p class="internautenav-hint">{$internautenav_chid_hint|escape:'htmlall':'UTF-8'}</p>
           </div>
           <div class="form-group internautenav-group">
             <div class="internautenav-mrz-line1-row">
@@ -117,6 +118,7 @@
         <div class="js-internautenav-doc-fields" data-doc-type="ch_pass" hidden>
           <div class="internautenav-chpass-fields-header">
             <h3>{$internautenav_pass_front_label|escape:'htmlall':'UTF-8'}</h3>
+            <p class="internautenav-hint">{$internautenav_chpass_hint|escape:'htmlall':'UTF-8'}</p>
           </div>
           <div class="form-group internautenav-group">
             <div class="internautenav-mrz-fixed js-internautenav-chpass-line1-text"
@@ -159,6 +161,10 @@
         </div>
 
         <div class="js-internautenav-doc-fields" data-doc-type="eu_pass" hidden>
+          <div class="internautenav-eupass-fields-header">
+            <h3>{$internautenav_doc_eu_pass|escape:'htmlall':'UTF-8'}</h3>
+            <p class="internautenav-hint">{$internautenav_eupass_hint|escape:'htmlall':'UTF-8'}</p>
+          </div>
           <div class="form-group internautenav-group">
             <label
               for="internautenav_modal_eu_pass_line1_{$internautenav_carrier_id|intval}">{$internautenav_line1_label|escape:'htmlall':'UTF-8'}</label>
@@ -171,7 +177,6 @@
             <input id="internautenav_modal_eu_pass_line2_{$internautenav_carrier_id|intval}" class="form-control"
               type="text" name="internautenav_modal_line2" autocomplete="off" maxlength="44">
           </div>
-          <p class="internautenav-hint">{$internautenav_hint|escape:'htmlall':'UTF-8'}</p>
         </div>
 
         <div class="js-internautenav-doc-fields" data-doc-type="upload" hidden>

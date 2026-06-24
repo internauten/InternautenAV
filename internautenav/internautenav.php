@@ -28,7 +28,7 @@ class Internautenav extends Module
     {
         $this->name = 'internautenav';
         $this->tab = 'shipping_logistics';
-        $this->version = '3.1.1';
+        $this->version = '3.1.2';
         $this->author = 'die.internauten.ch';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -810,7 +810,9 @@ class Internautenav extends Module
             'internautenav_line3_label' => $this->l('form_line3_label'),
             'internautenav_upload_label' => $this->l('Dokumentbild hochladen'),
             'internautenav_upload_hint' => $this->l('Bitte laden Sie ein gut lesbares Bild eines amtlichen Dokuments hoch (Reisepass, Identitaetskarte, Aufenthaltsbewilligung oder anderes amtliches Dokument).'),
-            'internautenav_hint' => $this->l('modal_hint'),
+            'internautenav_chid_hint' => $this->l('Bitte die zwei oberen Zeilen exakt wie auf der Rückseite der Schweizer ID eingeben. Die dritte Zeile ist vorbelegt mit dem Namen aus der Lieferadresse.'),
+            'internautenav_chpass_hint' => $this->l('Bitte die Daten exakt wie auf der untersten Zeile der Datenseite des Schweizer Passes eingeben.'),
+            'internautenav_eupass_hint' => $this->l('Bitte beide MRZ-Zeilen exakt wie im europäischen Pass eingeben, inklusive < Zeichen.'),
         ]);
 
         return $this->display(__FILE__, 'views/templates/hook/payment_gate.tpl');

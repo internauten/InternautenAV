@@ -38,6 +38,9 @@ $_MODULE['<{internautenav}prestashop>internautenav_448d315158bc82c3f64ceb007056f
 $_MODULE['<{internautenav}prestashop>internautenav_c691329cd3e16f8d829813b5feb2b451'] = 'Close';
 $_MODULE['<{internautenav}prestashop>internautenav_a1f8eac04d0be0521423b13bd3e78b16'] = 'Verify Now';
 $_MODULE['<{internautenav}prestashop>internautenav_4086ac267cc51dcffd8581677232ee9c'] = 'Please enter lines exactly as in the document, including <.';
+$_MODULE['<{internautenav}prestashop>internautenav_bd8eecdbb17583ffefc846b128fba6ac'] = 'Please enter the top two lines exactly as shown on the back of the Swiss ID. The third line is prefilled with the name from the delivery address.';
+$_MODULE['<{internautenav}prestashop>internautenav_ac53a17ff38f865cec95edfefdbd1191'] = 'Please enter the data exactly as shown on the bottom line of the data page of the Swiss passport.';
+$_MODULE['<{internautenav}prestashop>internautenav_75361cbfd39144f3187de38763362015'] = 'Please enter both MRZ lines exactly as shown in the European passport, including the < characters.';
 $_MODULE['<{internautenav}prestashop>internautenav_287406fe9a6e57317fc5a5795e6f2900'] = 'Document Type';
 $_MODULE['<{internautenav}prestashop>internautenav_12309f0fc1ad868231073aef2aa31ab9'] = 'Swiss ID';
 $_MODULE['<{internautenav}prestashop>internautenav_083559e45e69f446341bde604c601818'] = 'Swiss Passport';
