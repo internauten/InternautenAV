@@ -171,7 +171,6 @@
 
 .internautenav-hint {
   margin: 8px 0 0;
-  font-size: 12px;
   color: #6b6257;
 }
 
@@ -254,9 +253,9 @@ body.internautenav-modal-open {
 }
 
 .internautenav-chid-fields-header {
-  height: 100px;
+  min-height: 100px;
 }
 
 .internautenav-chpass-fields-header {
-  height: 100px;
+  min-height: 100px;
 }
