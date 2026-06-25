@@ -197,6 +197,12 @@
         <p class="internautenav-modal-error js-internautenav-error" hidden></p>
 
         <div class="internautenav-modal-actions">
+          {if $internautenav_help_url|default:''}
+            <a class="btn btn-default internautenav-help-link" href="{$internautenav_help_url|escape:'htmlall':'UTF-8'}"
+              target="_blank" rel="noopener noreferrer">
+              {$internautenav_help_label|escape:'htmlall':'UTF-8'}
+            </a>
+          {/if}
           <button type="button" class="btn btn-secondary js-internautenav-close">
             {$internautenav_modal_close|escape:'htmlall':'UTF-8'}
           </button>

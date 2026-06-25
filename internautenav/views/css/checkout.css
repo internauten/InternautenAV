@@ -210,6 +210,10 @@
   border-top: 1px solid #e7e1d8;
 }
 
+.internautenav-help-link {
+  margin-right: auto;
+}
+
 body.internautenav-modal-open {
   overflow: hidden;
 }

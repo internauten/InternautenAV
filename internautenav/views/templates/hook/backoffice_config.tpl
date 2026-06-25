@@ -42,6 +42,21 @@
         </div>
 
         <div class="form-group">
+            <label>{$internautenav_help_cms_label|escape:'htmlall':'UTF-8'}</label>
+            <select name="INTERNAUTENAV_HELP_CMS_ID" class="form-control">
+                <option value="0" {if $internautenav_help_cms_id === 0} selected{/if}>
+                    — {$internautenav_help_default_label|escape:'htmlall':'UTF-8'} —
+                </option>
+                {foreach from=$internautenav_cms_pages item=page}
+                    <option value="{$page.id_cms|escape:'htmlall':'UTF-8'}" {if $internautenav_help_cms_id === $page.id_cms}
+                        selected{/if}>
+                        #{$page.id_cms|escape:'htmlall':'UTF-8'} – {$page.meta_title|escape:'htmlall':'UTF-8'}
+                    </option>
+                {/foreach}
+            </select>
+        </div>
+
+        <div class="form-group">
             <label>
                 <input type="checkbox" name="INTERNAUTENAV_STATUS_DEBUG_ENABLED" value="1"
                     {if $internautenav_status_debug_enabled}checked{/if}>
