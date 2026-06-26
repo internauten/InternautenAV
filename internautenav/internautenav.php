@@ -29,7 +29,7 @@ class Internautenav extends Module
     {
         $this->name = 'internautenav';
         $this->tab = 'shipping_logistics';
-        $this->version = '3.2.0';
+        $this->version = '3.2.1';
         $this->author = 'die.internauten.ch GmbH';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -801,6 +801,7 @@ class Internautenav extends Module
             'internautenav_privacy_example_hint' => $this->l('Aktuell wird die Modul-Beispielseite verwendet. Die finale Datenschutzerklaerung bitte als CMS-Seite hinterlegen.'),
             'internautenav_help_url' => $helpUrl,
             'internautenav_help_label' => $this->l('Hilfe'),
+            'internautenav_help_labellong' => $this->l('Warum muss ich eine Altersprüfung machen?'),
             'internautenav_line3_prefill' => $this->getDeliveryAddressMrzLine3Prefill(),
             'internautenav_pass_line1_prefill' => $this->getDeliveryAddressSwissPassLine1Prefill(),
             'internautenav_customer_sex' => $this->getCustomerMrzSex(),

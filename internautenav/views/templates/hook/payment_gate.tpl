@@ -17,6 +17,14 @@
       {/if}
     </p>
 
+    <p>
+      {if $internautenav_help_url|default:''}
+        <a href="{$internautenav_help_url|escape:'htmlall':'UTF-8'}" target="_blank" rel="noopener noreferrer">
+          {$internautenav_help_labellong|escape:'htmlall':'UTF-8'}
+        </a>
+      {/if}
+    </p>
+
     <p class="internautenav-payment-lock-note js-internautenav-lock-note"
       {if $internautenav_is_verified}style="display:none;" {/if}>
       {$internautenav_payment_locked|escape:'htmlall':'UTF-8'}
